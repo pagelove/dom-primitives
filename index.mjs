@@ -1,3 +1,38 @@
+// might as well return 'this'
+Object.defineProperty(HTMLElement.prototype, "GET", {
+    value: function() {
+        return this;
+    }
+});
+
+const notDOMAware = function() {
+    const evt = new CustomEvent("DASUnavailable", { bubbles: true, detail: {} })
+    this.dispatchEvent(evt);        
+}
+
+Object.defineProperty(HTMLElement.prototype, 'HEAD', {
+    value: notDOMAware
+});
+
+// POST is the HTTP equivalent of appendChild
+Object.defineProperty(HTMLElement.prototype, "POST", {
+    value: notDOMAware
+})
+
+// PUT is the HTTP equivalent of replaceChild
+Object.defineProperty(HTMLElement.prototype, "PUT", {
+    value: notDOMAware
+});
+
+Object.defineProperty(HTMLElement.prototype, "PATCH", {
+    value: notDOMAware
+});
+
+// 
+Object.defineProperty(HTMLElement.prototype, "DELETE", {
+    value: notDOMAware
+});
+
 const optionsRequest = fetch(window.location, {
     method: "OPTIONS",    
 });
@@ -6,7 +41,16 @@ const serverDetail = {}
 Object.defineProperty(serverDetail, "DOMAware", {
     get: async function() {
         let result = await optionsRequest;
-        return !!result.headers.get('Accept-Ranges').match(/selector/)
+        if ( result.ok ) {
+            const dasAvailable = !!result.headers.get('Accept-Ranges').match(/selector/);
+            const evt = new CustomEvent("DASAvailable", { bubbles: true, detail: { }})
+            document.dispatchEvent(evt);
+            return dasAvailable;
+        } else {
+            const evt = new CustomEvent("DASUnavailable", { bubbles: true, detail: { }});
+            document.dispatchEvent(evt);            
+            return false;
+        }
     }
 })
 Object.defineProperty( window.location, "server", {
@@ -15,27 +59,51 @@ Object.defineProperty( window.location, "server", {
 
 const { DOMAware } = await window.location.server;
 
+Object.defineProperty(HTMLElement.prototype, 'selector', {
+    enumerable: false,
+    get: function() {
+        let el = this;
+        let path = [], parent;
+        while (parent = el.parentNode) {
+            path.unshift(`${el.tagName}:nth-child(${[].indexOf.call(parent.children, el)+1})`);
+            el = parent;
+        }
+        return `${path.join(' > ')}`.toLowerCase();        
+    }
+});
+
+
 /*
     If we are a DOM enabled web server then we can do stuff.
 */
 if (DOMAware) {
-    Object.defineProperty(HTMLElement.prototype, 'selector', {
-        enumerable: false,
-        get: function() {
-            let el = this;
-            let path = [], parent;
-            while (parent = el.parentNode) {
-                path.unshift(`${el.tagName}:nth-child(${[].indexOf.call(parent.children, el)+1})`);
-                el = parent;
-            }
-            return `${path.join(' > ')}`.toLowerCase();        
+    const processResponse = ( anElement, response ) => {
+        if ( response.ok ) {
+            const evt = new CustomEvent("DASOk", { bubbles: true, detail: { element: anElement, response: response }})
+            anElement.dispatchEvent(evt);
+        } else {
+            const evt = new CustomEvent("DASError", { bubbles: true, detail: { element: anElement, response: response }})
+            anElement.dispatchEvent(evt);
         }
-    });
+        return response;
+    }
 
     // might as well return 'this'
     Object.defineProperty(HTMLElement.prototype, "GET", {
         value: function() {
             return this;
+        }
+    });
+
+    Object.defineProperty(HTMLElement.prototype, "HEAD", {
+        value: async function() {
+            const headers = new Headers();
+            headers.set('Range', `selector=${this.selector}`);
+            const response = await fetch(window.location, {
+                headers,
+                method: 'HEAD'
+            });
+            return processResponse( this, response )
         }
     });
 
@@ -50,7 +118,7 @@ if (DOMAware) {
                 body: this.outerHTML,
                 method: POST
             });
-            return response;
+            return processResponse( this, response );
         }
     })
 
@@ -65,7 +133,7 @@ if (DOMAware) {
                 body  : this.outerHTML,
                 method: 'PUT'
             })
-            return response;
+            return processResponse( this, response );
         }
     });
 
@@ -78,7 +146,7 @@ if (DOMAware) {
                 headers: headers,
                 body: JSON.stringify( anEMR )
             });
-            return response;
+            return processResponse( this, response );
         }
     });
 
@@ -91,7 +159,7 @@ if (DOMAware) {
                 headers,
                 method: 'DELETE'
             })
-            return response;
+            return processResponse( this, response );
         }
     });
 } else {
@@ -100,5 +168,6 @@ if (DOMAware) {
             'DOMAware': false
         }
     });
+
 }
 
