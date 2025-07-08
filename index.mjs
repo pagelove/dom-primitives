@@ -9,7 +9,7 @@ Object.defineProperty(HTMLElement.prototype, "GET", {
 
 const notDOMAware = function() {
     const evt = new CustomEvent("DASUnavailable", { bubbles: true, detail: {} })
-    this.dispatchEvent(evt);        
+    this.dispatchEvent(evt);
 }
 
 Object.defineProperty(HTMLElement.prototype, 'HEAD', {
@@ -46,12 +46,13 @@ Object.defineProperty(HTMLElement.prototype, 'selector', {
     enumerable: false,
     get: function() {
         let el = this;
-        let path = [], parent;
+        let path = [],
+            parent;
         while (parent = el.parentNode) {
             path.unshift(`${el.tagName}:nth-child(${[].indexOf.call(parent.children, el)+1})`);
             el = parent;
         }
-        return `${path.join(' > ')}`.toLowerCase();        
+        return `${path.join(' > ')}`.toLowerCase();
     }
 });
 
@@ -59,12 +60,12 @@ Object.defineProperty(HTMLElement.prototype, 'selector', {
     If we are a DOM enabled web server then we can do stuff.
 */
 
-const processResponse = ( anElement, response ) => {
-    if ( response.ok ) {
-        const evt = new CustomEvent("DASOk", { bubbles: true, detail: { element: anElement, response: response }})
+const processResponse = (anElement, response) => {
+    if (response.ok) {
+        const evt = new CustomEvent("DASOk", { bubbles: true, detail: { element: anElement, response: response } })
         anElement.dispatchEvent(evt);
     } else {
-        const evt = new CustomEvent("DASError", { bubbles: true, detail: { element: anElement, response: response }})
+        const evt = new CustomEvent("DASError", { bubbles: true, detail: { element: anElement, response: response } })
         anElement.dispatchEvent(evt);
     }
     return response;
@@ -86,22 +87,22 @@ document.addEventListener('DASAvailable', () => {
                 headers,
                 method: 'HEAD'
             });
-            return processResponse( this, response )
+            return processResponse(this, response)
         }
     });
 
     // POST is the HTTP equivalent of appendChild
     Object.defineProperty(HTMLElement.prototype, "POST", {
-        value: async function() {
+        value: async function(formData) {
             const headers = new Headers();
             headers.set("Range", `selector=${this.parentNode.selector}`);
-            headers.set("Content-Type", "text/html");
+            if (!(formData instanceof FormData)) headers.set("Content-Type", "text/html");
             const response = await fetch(window.location, {
                 headers,
-                body: this.outerHTML,
+                body: formData,
                 method: POST
             });
-            return processResponse( this, response );
+            return processResponse(this, response);
         }
     })
 
@@ -113,23 +114,23 @@ document.addEventListener('DASAvailable', () => {
             headers.set("Content-Type", "text/html");
             const response = await fetch(window.location, {
                 headers,
-                body  : this.outerHTML,
+                body: this.outerHTML,
                 method: 'PUT'
             })
-            return processResponse( this, response );
+            return processResponse(this, response);
         }
     });
 
     Object.defineProperty(HTMLElement.prototype, "PATCH", {
-        value: async function( anEMR ) {
+        value: async function(anEMR) {
             const headers = new Headers();
             headers.set('Content-Type', 'application/json');
             const response = await fetch(window.location, {
                 method: 'PATCH',
                 headers: headers,
-                body: JSON.stringify( anEMR )
+                body: JSON.stringify(anEMR)
             });
-            return processResponse( this, response );
+            return processResponse(this, response);
         }
     });
 
@@ -141,23 +142,23 @@ document.addEventListener('DASAvailable', () => {
                 headers,
                 method: 'DELETE'
             });
-            return processResponse( this, response );
+            return processResponse(this, response);
         }
     });
 });
 
 const optionsRequest = await fetch(window.location, {
-    method: "OPTIONS",    
+    method: "OPTIONS",
 });
 
-if ( optionsRequest.ok ) {
+if (optionsRequest.ok) {
     window.location.server.DASAware = !!optionsRequest.headers.get('Accept-Ranges').match(/selector/);
 }
 
 if (window.location.server.DASAware) {
-    const evt = new CustomEvent("DASAvailable", { bubbles: true, detail: { }})
+    const evt = new CustomEvent("DASAvailable", { bubbles: true, detail: {} })
     document.dispatchEvent(evt);
 } else {
-    const evt = new CustomEvent("DASUnavailable", { bubbles: true, detail: { }});
-    document.dispatchEvent(evt);            
+    const evt = new CustomEvent("DASUnavailable", { bubbles: true, detail: {} });
+    document.dispatchEvent(evt);
 }
