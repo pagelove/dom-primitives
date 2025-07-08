@@ -100,7 +100,7 @@ document.addEventListener('DASAvailable', () => {
             const response = await fetch(window.location, {
                 headers,
                 body: formData,
-                method: POST
+                method: 'POST'
             });
             return processResponse(this, response);
         }
