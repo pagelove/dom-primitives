@@ -327,15 +327,51 @@ element.addEventListener('DASError', (event) => {
 ### Progressive Enhancement Pattern
 
 ```javascript
-class EnhancedList extends HTMLElement {
-  connectedCallback() {
-    if (this.closest('[data-das-available]')) {
-      this.querySelectorAll('li').forEach(item => {
-        item.addEventListener('click', () => item.DELETE())
-      })
+// Base HTML works without JavaScript
+// <a href="/delete-item?id=123" class="delete-link">Delete</a>
+
+// Enhance with DOM-Aware functionality when available
+document.addEventListener('DASAvailable', () => {
+  // Replace traditional form/link behavior with direct element operations
+  document.querySelectorAll('.delete-link').forEach(link => {
+    link.addEventListener('click', async (e) => {
+      e.preventDefault() // Stop navigation
+      
+      // Find the item to delete (e.g., parent <li>)
+      const item = link.closest('li')
+      
+      try {
+        await item.DELETE()
+        // Item removed by server, DOM updated automatically
+      } catch (error) {
+        // Fall back to traditional navigation if DELETE fails
+        window.location.href = link.href
+      }
+    })
+  })
+})
+
+// Example: Enhance a todo list that works without JavaScript
+document.addEventListener('DASAvailable', () => {
+  const todoList = document.querySelector('#todo-list')
+  
+  // Convert form submission to DOM-aware POST
+  const addForm = document.querySelector('#add-todo-form')
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    
+    const input = addForm.querySelector('input[name="task"]')
+    const newItem = `<li>${input.value}</li>`
+    
+    try {
+      await todoList.POST(newItem)
+      input.value = '' // Clear input on success
+    } catch (error) {
+      // Fall back to form submission
+      addForm.submit()
     }
-  }
-}
+  })
+})
 ```
 
 ### Collaborative Editing Example
