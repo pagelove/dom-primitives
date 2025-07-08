@@ -95,7 +95,7 @@ document.addEventListener('DASAvailable', () => {
     Object.defineProperty(HTMLElement.prototype, "POST", {
         value: async function(formData) {
             const headers = new Headers();
-            headers.set("Range", `selector=${this.parentNode.selector}`);
+            headers.set("Range", `selector=${this.selector}`);
             if (!(formData instanceof FormData)) headers.set("Content-Type", "text/html");
             const response = await fetch(window.location, {
                 headers,
