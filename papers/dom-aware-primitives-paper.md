@@ -186,14 +186,45 @@ Agents can understand and manipulate structured data without custom APIs.
 CMSs can expose editing capabilities directly through HTML:
 
 ```javascript
-// Edit mode: make elements directly mutable
-document.querySelectorAll('[data-editable]').forEach(el => {
-  el.contentEditable = true
-  el.addEventListener('blur', () => {
-    // PUT sends the element's current state
-    el.PUT()
+// Enable save-on-blur for existing contenteditable elements
+document.addEventListener('DASAvailable', () => {
+  document.querySelectorAll('[contenteditable]').forEach(el => {
+    el.addEventListener('blur', async () => {
+      try {
+        await el.PUT()
+        // Visual feedback on successful save
+        el.style.outline = '2px solid green'
+        setTimeout(() => el.style.outline = '', 1000)
+      } catch (error) {
+        el.style.outline = '2px solid red'
+        console.error('Failed to save:', error)
+      }
+    })
   })
 })
+
+// CMS edit mode toggle example
+let dasAvailable = false
+document.addEventListener('DASAvailable', () => { dasAvailable = true })
+
+function toggleEditMode(enabled) {
+  if (enabled && dasAvailable) {
+    // Make article elements editable
+    document.querySelectorAll('article h1, article h2, article p').forEach(el => {
+      el.contentEditable = 'plaintext-only'
+      el.addEventListener('blur', () => el.PUT(), { once: true })
+    })
+    
+    // Show edit UI
+    document.body.classList.add('edit-mode')
+  } else {
+    // Disable editing
+    document.querySelectorAll('[contenteditable]').forEach(el => {
+      el.contentEditable = 'false'
+    })
+    document.body.classList.remove('edit-mode')
+  }
+}
 ```
 
 ## 5. Benefits and Implications
