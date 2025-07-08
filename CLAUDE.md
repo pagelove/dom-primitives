@@ -2,6 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Architectural Vision
+
+This library implements a profound paradigm shift in web architecture:
+
+**The HTML document becomes simultaneously the user interface AND the API.**
+
+### Core Principles
+
+1. **There is only one web, and it's hypermedia all the way down** - No artificial separation between HTML for humans and JSON APIs for machines.
+
+2. **True REST implementation** - This fulfills Roy Fielding's original REST vision better than traditional "REST" APIs:
+   - The HTML document IS the hypermedia (HATEOAS)
+   - Elements discover their capabilities through HTTP
+   - Uniform interface on every element
+   - Stateless with all context in CSS selectors
+
+3. **Security through opacity** - Permissions aren't exposed in client code. Clients discover capabilities by attempting operations and receiving HTTP status codes.
+
+4. **Semantic stability** - Using IDs and microdata, selectors become as stable as traditional REST endpoints while maintaining semantic meaning.
+
+### Key Insights
+
+- **HTML elements are resources** - Each element can be addressed and manipulated individually
+- **CSS selectors are resource identifiers** - Like URIs but with positional context
+- **HTTP methods are state transitions** - Standard CRUD operations on any element
+- **The document is the database** - Queryable, mutable, with built-in presentation
+
 ## Overview
 
 This is a client-side JavaScript library that adds HTTP-style methods (GET, HEAD, POST, PUT, PATCH, DELETE) to HTML elements for communicating with DOM-aware servers (DAS). The library extends HTMLElement.prototype to enable direct HTTP operations on DOM elements.
@@ -29,6 +56,9 @@ This is a client-side JavaScript library that adds HTTP-style methods (GET, HEAD
 
 - **Range Header**: Uses `Range: selector=<css-selector>` to identify target elements on the server
 - **CSS Selector Generation**: Elements automatically generate their selector path for server communication
+  - Prefers IDs when available for stability (returns `#id`)
+  - Falls back to nearest parent with ID (e.g., `#container > div:nth-child(2)`)
+  - Only uses full path when no IDs exist
 - **Progressive Enhancement**: Library works with or without DOM-aware server support
 
 ## Development Commands
@@ -59,3 +89,22 @@ Currently uses test.html for manual testing. The test page:
    - Responds to OPTIONS with `Accept-Ranges: selector` header
    - Understands Range headers with CSS selectors
    - Can process HTML/FormData payloads
+
+## Design Philosophy
+
+When making changes to this codebase, remember:
+
+1. **Simplicity over complexity** - This is a primitive, foundational library. Keep it lean.
+2. **Standards compliance** - Use existing web standards correctly rather than inventing new ones.
+3. **Progressive enhancement** - The library should enhance capabilities without breaking basic HTML functionality.
+4. **Security by design** - Never expose permissions or security logic in client code.
+
+## Future Possibilities
+
+This approach enables:
+- **Collaborative editing** - Multiple users editing different elements simultaneously
+- **Universal API clients** - One client can work with any DOM-aware website
+- **AI-native interfaces** - LLMs can understand and manipulate semantic HTML
+- **Document-as-database** - HTML pages become queryable, mutable data stores
+
+The goal is to reunify the web - making every HTML document both human-readable AND a fully-functional API.
