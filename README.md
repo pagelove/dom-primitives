@@ -37,13 +37,13 @@ This implements REST as Roy Fielding originally envisioned:
 Simply include the module in your HTML:
 
 ```html
-<script type="module" src="./index.mjs"></script>
+<script type="module" src="https://jamesaduncan.github.io/dom-aware-primitives/index.mjs"></script>
 ```
 
 Or import it in your JavaScript:
 
 ```javascript
-import './index.mjs';
+import 'https://jamesaduncan.github.io/dom-aware-primitives/index.mjs';
 ```
 
 ## How It Works
@@ -202,7 +202,7 @@ curl -X DELETE -H "Range: selector=.temporary" http://localhost:8080/page.html
 <!DOCTYPE html>
 <html>
 <head>
-    <script type="module" src="./index.mjs"></script>
+    <script type="module" src="https://jamesaduncan.github.io/dom-aware-primitives/index.mjs"></script>
 </head>
 <body>
     <div id="content">
