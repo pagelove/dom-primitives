@@ -63,7 +63,73 @@ Each operation includes a `Range: selector=<css-selector>` header, allowing the 
 2. Reference nearest parent with ID (`#parentId > div:nth-child(2)`)
 3. Generate full path only when necessary
 
-### 3.3 Server Requirements
+### 3.3 The Range Header: Repurposing HTTP Standards
+
+The Range header is traditionally used in HTTP to request partial content from resources, typically for resumable downloads or streaming media. DOM-Aware Primitives repurposes this standard header with a custom range unit: `selector`.
+
+#### Traditional Range Header Usage
+```
+GET /video.mp4 HTTP/1.1
+Range: bytes=200-1023
+```
+
+#### DOM-Aware Primitives Range Header
+```
+PUT /page.html HTTP/1.1
+Range: selector=#post-123-title
+Content-Type: text/html
+
+<h1>Updated Blog Post Title</h1>
+```
+
+This approach offers several advantages:
+
+1. **Standards Compliance**: Reuses existing HTTP infrastructure rather than inventing new headers
+2. **Semantic Clarity**: The Range header naturally expresses "which part" of the document
+3. **Server Flexibility**: Servers can support both byte ranges and selector ranges
+4. **Graceful Degradation**: Non-DAS servers simply ignore unrecognized range units
+
+#### Selector Examples in Practice
+
+```javascript
+// Simple ID selector
+document.querySelector('#header').PUT()
+// Sends: Range: selector=#header
+
+// Contextual selector with parent ID
+document.querySelector('#content > p:first-child').DELETE()
+// Sends: Range: selector=#content > p:first-child
+
+// Complex selector for deeply nested elements
+document.querySelector('.article .comments li:nth-child(3)').GET()
+// Sends: Range: selector=.article .comments li:nth-child(3)
+```
+
+#### Server-Side Processing
+
+DOM-Aware Servers must:
+1. Parse the Range header to extract the CSS selector
+2. Apply the selector to their DOM representation
+3. Perform the requested operation on the matched element(s)
+4. Return appropriate status codes:
+   - `206 Partial Content` for successful range operations
+   - `416 Range Not Satisfiable` if selector matches no elements
+   - `400 Bad Request` for invalid selectors
+
+Example server pseudocode:
+```python
+def handle_request(request):
+    if 'Range' in request.headers:
+        range_value = request.headers['Range']
+        if range_value.startswith('selector='):
+            selector = range_value[9:]  # Remove 'selector=' prefix
+            elements = dom.select(selector)
+            if not elements:
+                return Response(416, "Range Not Satisfiable")
+            # Process the matched elements...
+```
+
+### 3.4 Server Requirements
 
 DOM-Aware Servers must:
 - Signal capability via `Accept-Ranges: selector` header
@@ -301,4 +367,141 @@ observer.observe(document.querySelector('#collaborative-doc'), {
   characterData: true,
   subtree: true
 })
+```
+
+## Appendix B: HTTP Exchange Examples
+
+### Initial Capability Detection
+
+**Request:**
+```
+OPTIONS / HTTP/1.1
+Host: example.com
+```
+
+**Response:**
+```
+HTTP/1.1 200 OK
+Accept-Ranges: selector
+Allow: GET, HEAD, POST, PUT, DELETE, OPTIONS
+```
+
+### GET Operation
+
+**Client Code:**
+```javascript
+document.querySelector('#sidebar').GET()
+```
+
+**HTTP Request:**
+```
+GET /page.html HTTP/1.1
+Host: example.com
+Range: selector=#sidebar
+```
+
+**HTTP Response:**
+```
+HTTP/1.1 206 Partial Content
+Content-Type: text/html
+Content-Range: selector #sidebar
+
+<div id="sidebar">
+  <h3>Navigation</h3>
+  <ul>
+    <li><a href="/">Home</a></li>
+    <li><a href="/about">About</a></li>
+  </ul>
+</div>
+```
+
+### PUT Operation
+
+**Client Code:**
+```javascript
+const title = document.querySelector('h1')
+title.textContent = 'New Page Title'
+await title.PUT()
+```
+
+**HTTP Request:**
+```
+PUT /page.html HTTP/1.1
+Host: example.com
+Range: selector=h1
+Content-Type: text/html
+
+<h1>New Page Title</h1>
+```
+
+**HTTP Response:**
+```
+HTTP/1.1 204 No Content
+```
+
+### POST Operation (Append)
+
+**Client Code:**
+```javascript
+const list = document.querySelector('#todo-list')
+await list.POST('<li>New todo item</li>')
+```
+
+**HTTP Request:**
+```
+POST /page.html HTTP/1.1
+Host: example.com
+Range: selector=#todo-list
+Content-Type: text/html
+
+<li>New todo item</li>
+```
+
+**HTTP Response:**
+```
+HTTP/1.1 201 Created
+Location: #todo-list > li:last-child
+```
+
+### DELETE Operation
+
+**Client Code:**
+```javascript
+document.querySelector('.advertisement').DELETE()
+```
+
+**HTTP Request:**
+```
+DELETE /page.html HTTP/1.1
+Host: example.com
+Range: selector=.advertisement
+```
+
+**HTTP Response:**
+```
+HTTP/1.1 204 No Content
+```
+
+### Error Scenarios
+
+**Selector Not Found:**
+```
+HTTP/1.1 416 Range Not Satisfiable
+Content-Range: selector */0
+```
+
+**Invalid Selector:**
+```
+HTTP/1.1 400 Bad Request
+Content-Type: text/plain
+
+Invalid CSS selector: "#unclosed
+```
+
+**Unauthorized Operation:**
+```
+HTTP/1.1 403 Forbidden
+Content-Type: text/plain
+
+User lacks permission to modify element #admin-panel
 ```
