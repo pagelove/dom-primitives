@@ -45,13 +45,27 @@ Object.defineProperty(HTMLElement.prototype, "DELETE", {
 Object.defineProperty(HTMLElement.prototype, 'selector', {
     enumerable: false,
     get: function() {
+        // If element has an ID, use it as the selector for stability
+        if (this.id) {
+            return `#${this.id}`;
+        }
+        
+        // Otherwise, build a path from the nearest parent with an ID
         let el = this;
-        let path = [],
-            parent;
+        let path = [];
+        let parent;
+        
         while (parent = el.parentNode) {
+            // If parent has an ID, we can start our selector from there
+            if (parent.id) {
+                path.unshift(`#${parent.id} > ${el.tagName}:nth-child(${[].indexOf.call(parent.children, el)+1})`);
+                return path.join(' > ').toLowerCase();
+            }
+            
             path.unshift(`${el.tagName}:nth-child(${[].indexOf.call(parent.children, el)+1})`);
             el = parent;
         }
+        
         return `${path.join(' > ')}`.toLowerCase();
     }
 });

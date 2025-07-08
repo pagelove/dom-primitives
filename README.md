@@ -1,6 +1,27 @@
 # dom-aware-primitives
 
-A JavaScript library that extends HTML elements with HTTP-style methods (GET, HEAD, POST, PUT, PATCH, DELETE) to enable direct communication with DOM-aware servers. This allows you to perform server operations directly on DOM elements using familiar HTTP semantics.
+A JavaScript library that extends HTML elements with HTTP-style methods (GET, HEAD, POST, PUT, PATCH, DELETE) to enable direct communication with DOM-aware servers. This revolutionary approach treats the HTML document itself as a hypermedia API, unifying the human-readable web with machine-readable services.
+
+## The Vision
+
+This library implements a profound architectural pattern: **the HTML document becomes simultaneously the user interface AND the API**. Instead of maintaining separate REST endpoints alongside your HTML, the document itself becomes a living, RESTful resource where every element can be directly manipulated through standard HTTP methods.
+
+## Why This Matters
+
+Traditional web architecture forces an artificial separation:
+- **HTML** for human users
+- **JSON APIs** for programmatic access
+- **Complex client-side state management** to sync between them
+
+This approach declares: **there is only one web, and it's hypermedia all the way down.**
+
+### True REST (Finally)
+
+This implements REST as Roy Fielding originally envisioned:
+- **Hypermedia as the Engine of Application State (HATEOAS)**: The HTML document IS the hypermedia
+- **Self-Describing**: Elements discover their capabilities through HTTP
+- **Uniform Interface**: Every element has the same methods
+- **Stateless**: Each request contains all context via CSS selectors
 
 ## Features
 
@@ -9,6 +30,7 @@ A JavaScript library that extends HTML elements with HTTP-style methods (GET, HE
 - **Progressive Enhancement**: Works with or without DOM-aware server support
 - **Event-Driven Architecture**: Rich event system for handling server responses and availability
 - **Zero Dependencies**: Pure vanilla JavaScript ES module
+- **Security Through Opacity**: Permissions are discovered by trying, not enumerated in client code
 
 ## Installation
 
@@ -152,6 +174,8 @@ Content-Type: text/html
 
 ## Example Usage
 
+### Basic Operations
+
 ```html
 <!DOCTYPE html>
 <html>
@@ -191,6 +215,101 @@ Content-Type: text/html
 </html>
 ```
 
+### Advanced: Using IDs for Stable Selectors
+
+```html
+<article id="post-123">
+    <h1 id="post-123-title">Original Title</h1>
+    <div id="post-123-content">Content here</div>
+</article>
+
+<script type="module">
+    // IDs make selectors as stable as traditional REST endpoints
+    const title = document.querySelector('#post-123-title');
+    await title.PUT(); // Range: selector=#post-123-title
+</script>
+```
+
+### Advanced: Semantic Operations with Microdata
+
+```html
+<article itemscope itemtype="https://schema.org/BlogPosting" id="post-123">
+    <h1 itemprop="headline" id="headline-123">My Blog Post</h1>
+    <div itemprop="author" itemscope itemtype="https://schema.org/Person">
+        <span itemprop="name" id="author-name">Jane Doe</span>
+    </div>
+    <div itemprop="articleBody" id="content-123">
+        <p>Article content...</p>
+    </div>
+</article>
+
+<script type="module">
+    // Update semantically meaningful elements
+    const headline = document.querySelector('[itemprop="headline"]');
+    headline.textContent = "Updated: My Blog Post";
+    await headline.PUT();
+    
+    // The server can validate against schema.org constraints
+</script>
+```
+
+### Advanced: Permission Discovery Pattern
+
+```javascript
+// Instead of checking permissions upfront, discover through action
+async function makeEditable(element) {
+    // Try to probe capabilities
+    const response = await element.HEAD();
+    const allowed = response.headers.get('Allow') || '';
+    
+    if (allowed.includes('PUT')) {
+        element.contentEditable = true;
+        element.addEventListener('blur', async () => {
+            const result = await element.PUT();
+            if (result.status === 403) {
+                element.contentEditable = false;
+                showMessage("You don't have permission to edit this");
+            }
+        });
+    }
+}
+
+// Apply to all elements with edit-on-click behavior
+document.querySelectorAll('[data-editable]').forEach(makeEditable);
+```
+
+## Revolutionary Possibilities
+
+### 1. Collaborative Editing
+Every element becomes a potential collaboration point. Multiple users can edit different parts of the same document with automatic conflict resolution through HTTP status codes.
+
+### 2. Progressive Enhancement That Actually Works
+- Search engines see normal HTML with microdata
+- JavaScript enhances it with editing capabilities
+- No complex hydration or server/client state sync
+
+### 3. Universal API Clients
+Since every DOM-aware site uses the same interface, one client can work with any website:
+```javascript
+// This code works on ANY DOM-aware website
+async function universalDelete(selector) {
+    const element = document.querySelector(selector);
+    return await element.DELETE();
+}
+```
+
+### 4. Granular Permissions Without Client Exposure
+Permissions live entirely server-side. The client discovers capabilities through HTTP status codes, preventing permission enumeration attacks.
+
+### 5. The Document Becomes the Database
+With IDs and microdata, HTML documents become queryable, editable databases where:
+- CSS selectors are your query language
+- HTTP methods are your transactions
+- Schema.org provides your type system
+
+### 6. AI-Native Web
+LLMs can understand and manipulate any website that follows this pattern, as the semantics are built into the HTML structure itself.
+
 ## Browser Compatibility
 
 This library requires modern browser support for:
@@ -198,6 +317,14 @@ This library requires modern browser support for:
 - Async/await
 - Fetch API
 - CustomEvent
+
+## The Future
+
+This approach suggests a future where:
+- **Every website is an API** - no separate endpoints needed
+- **HTML is the universal data format** - human and machine readable
+- **Permissions are element-granular** - security at the finest level
+- **The web is truly semantic** - meaning embedded in structure
 
 ## License
 
