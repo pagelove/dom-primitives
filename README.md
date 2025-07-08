@@ -348,6 +348,22 @@ This approach suggests a future where:
 - **Permissions are element-granular** - security at the finest level
 - **The web is truly semantic** - meaning embedded in structure
 
+## Further Reading
+
+For deeper analysis and context about DOM-Aware Primitives:
+
+1. **[DOM-Aware Primitives: Reunifying Web Architecture Through HTTP-Enabled HTML Elements](./dom-aware-primitives-paper.md)**
+   - Comprehensive technical overview of the DOM-Aware Primitives concept
+   - Architectural principles and implementation details
+   - Use cases and future directions
+   - Academic treatment of the paradigm shift this represents
+
+2. **[A Comparative Analysis of DOM-Aware Primitives and htmx](./dom-aware-primitives-vs-htmx-paper.md)**
+   - Detailed comparison with htmx, another hypermedia-driven library
+   - Architectural differences between declarative and imperative approaches
+   - When to use each approach
+   - Feature comparison matrix
+
 ## License
 
 Apache License 2.0

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>htmx-das Example</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .example {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .htmx-request {
+            opacity: 0.6;
+            transition: opacity 200ms;
+        }
+        
+        .htmx-request::after {
+            content: " (loading...)";
+            color: #666;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        #message-list {
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            min-height: 100px;
+            margin: 10px 0;
+        }
+        
+        .message {
+            background: #f0f0f0;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+        }
+        
+        .deleted {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <h1>htmx-das Examples</h1>
+    <p>These examples demonstrate htmx-style attributes powered by DOM-Aware Primitives.</p>
+    
+    <div class="example">
+        <h2>Example 1: Simple GET</h2>
+        <p>Click to refresh this content from the server:</p>
+        <div id="content1" hx-get="/content" hx-trigger="click" style="cursor: pointer; padding: 10px; background: #f0f0f0;">
+            Click me to refresh from server
+        </div>
+    </div>
+    
+    <div class="example">
+        <h2>Example 2: POST to Append</h2>
+        <p>Add new messages to the list:</p>
+        <button hx-post="/messages" hx-target="#message-list" hx-swap="beforeend">
+            Add Message
+        </button>
+        <div id="message-list">
+            <div class="message">Original message</div>
+        </div>
+    </div>
+    
+    <div class="example">
+        <h2>Example 3: DELETE Elements</h2>
+        <p>Click items to delete them:</p>
+        <ul id="todo-list">
+            <li hx-delete="/todos" hx-trigger="click" hx-confirm="Delete this item?">
+                Click to delete this todo item
+            </li>
+            <li hx-delete="/todos" hx-trigger="click" hx-confirm="Delete this item?">
+                Another todo item (click to delete)
+            </li>
+            <li hx-delete="/todos" hx-trigger="click" hx-confirm="Delete this item?">
+                Yet another todo item
+            </li>
+        </ul>
+    </div>
+    
+    <div class="example">
+        <h2>Example 4: PUT to Update</h2>
+        <p>Edit and save content:</p>
+        <div contenteditable="true" 
+             hx-put="/content" 
+             hx-trigger="blur"
+             style="border: 1px solid #ccc; padding: 10px; min-height: 50px;">
+            Edit this content and click outside to save
+        </div>
+    </div>
+    
+    <div class="example">
+        <h2>Example 5: Form Submission</h2>
+        <form hx-post="/submit" hx-target="#form-result">
+            <label>
+                Name:
+                <input type="text" name="name" required>
+            </label>
+            <br><br>
+            <label>
+                Message:
+                <textarea name="message" required></textarea>
+            </label>
+            <br><br>
+            <button type="submit">Submit Form</button>
+        </form>
+        <div id="form-result" style="margin-top: 10px;"></div>
+    </div>
+    
+    <div class="example">
+        <h2>Example 6: Triggered Updates</h2>
+        <p>Different trigger types:</p>
+        <input type="text" 
+               hx-get="/search" 
+               hx-trigger="keyup delay:500ms" 
+               hx-target="#search-results"
+               placeholder="Type to search (with delay)">
+        <div id="search-results"></div>
+        
+        <br><br>
+        
+        <button hx-get="/data" 
+                hx-trigger="click once"
+                hx-target="#once-result">
+            Click me (works only once)
+        </button>
+        <div id="once-result"></div>
+    </div>
+
+    <!-- Load DOM-Aware Primitives first -->
+    <script type="module" src="./index.mjs"></script>
+    
+    <!-- Then load htmx-das -->
+    <script src="./htmx-das.js"></script>
+    
+    <script>
+        // Log DAS events for debugging
+        document.addEventListener('DASAvailable', () => {
+            console.log('✅ DOM-Aware Server detected! htmx-das is active.');
+            document.body.style.borderTop = '3px solid green';
+        });
+        
+        document.addEventListener('DASUnavailable', () => {
+            console.log('❌ DOM-Aware Server not available. htmx-das functionality limited.');
+            document.body.style.borderTop = '3px solid red';
+        });
+        
+        // Example of programmatic htmx usage
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add some dynamic content that should be processed
+            setTimeout(() => {
+                const newDiv = document.createElement('div');
+                newDiv.className = 'example';
+                newDiv.innerHTML = `
+                    <h2>Example 7: Dynamically Added</h2>
+                    <p>This was added after page load:</p>
+                    <button hx-get="/dynamic" hx-target="this">
+                        Click me (I was added dynamically)
+                    </button>
+                `;
+                document.body.appendChild(newDiv);
+            }, 2000);
+        });
+        
+        // Listen for htmx events
+        document.body.addEventListener('htmx:load', (e) => {
+            console.log('htmx:load event on', e.target);
+        });
+        
+        document.body.addEventListener('htmx:error', (e) => {
+            console.error('htmx:error event:', e.detail);
+        });
+    </script>
+</body>
+</html>
