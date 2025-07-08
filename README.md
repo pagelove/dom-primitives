@@ -352,13 +352,13 @@ This approach suggests a future where:
 
 For deeper analysis and context about DOM-Aware Primitives:
 
-1. **[DOM-Aware Primitives: Reunifying Web Architecture Through HTTP-Enabled HTML Elements](./dom-aware-primitives-paper.md)**
+1. **[DOM-Aware Primitives: Reunifying Web Architecture Through HTTP-Enabled HTML Elements](/papers/dom-aware-primitives-paper.md)**
    - Comprehensive technical overview of the DOM-Aware Primitives concept
    - Architectural principles and implementation details
    - Use cases and future directions
    - Academic treatment of the paradigm shift this represents
 
-2. **[A Comparative Analysis of DOM-Aware Primitives and htmx](./dom-aware-primitives-vs-htmx-paper.md)**
+2. **[A Comparative Analysis of DOM-Aware Primitives and htmx](/papers/dom-aware-primitives-vs-htmx-paper.md)**
    - Detailed comparison with htmx, another hypermedia-driven library
    - Architectural differences between declarative and imperative approaches
    - When to use each approach
