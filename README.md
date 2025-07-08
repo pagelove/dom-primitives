@@ -30,7 +30,7 @@ This implements REST as Roy Fielding originally envisioned:
 - **Progressive Enhancement**: Works with or without DOM-aware server support
 - **Event-Driven Architecture**: Rich event system for handling server responses and availability
 - **Zero Dependencies**: Pure vanilla JavaScript ES module
-- **Security Through Opacity**: Permissions are discovered by trying, not enumerated in client code
+- **Permission Discovery**: Server-side permissions revealed through HTTP status codes, not exposed in client code
 
 ## Installation
 
