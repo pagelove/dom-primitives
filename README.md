@@ -172,6 +172,28 @@ Accept-Ranges: selector
 Content-Type: text/html
 ```
 
+### Reference Implementation: Rusty-Beam
+
+[Rusty-Beam](https://github.com/jamesaduncan/rusty-beam) is a complete DOM-aware server implementation written in Rust that works with this library. It demonstrates:
+
+- **Plugin-based architecture** for extensible server functionality
+- **Stateless DOM manipulation** - operates on HTML files without maintaining server-side state
+- **Range header parsing** to extract CSS selectors from requests
+- **Full HTTP method support** for DOM operations (GET, PUT, POST, DELETE)
+- **HTML-as-configuration** - even the server config is DOM-aware!
+
+Example interaction:
+```bash
+# Extract an element
+curl -H "Range: selector=#content" http://localhost:8080/page.html
+
+# Update an element
+curl -X PUT -H "Range: selector=#title" -d '<h1>New Title</h1>' http://localhost:8080/page.html
+
+# Delete elements
+curl -X DELETE -H "Range: selector=.temporary" http://localhost:8080/page.html
+```
+
 ## Example Usage
 
 ### Basic Operations
