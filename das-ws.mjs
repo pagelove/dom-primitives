@@ -4,6 +4,20 @@
 // Wait for DAS availability before extending
 document.addEventListener("DASAvailable", () => {
     
+    // Track local changes to prevent re-application from WebSocket
+    const localChanges = new Map(); // selector -> { timestamp, method, content }
+    const CHANGE_TIMEOUT = 5000; // 5 seconds to consider a change "local"
+    
+    // Clean up old local changes periodically
+    setInterval(() => {
+        const now = Date.now();
+        for (const [selector, change] of localChanges.entries()) {
+            if (now - change.timestamp > CHANGE_TIMEOUT) {
+                localChanges.delete(selector);
+            }
+        }
+    }, CHANGE_TIMEOUT);
+    
     // Convert current URL to WebSocket URL
     function getWebSocketUrl() {
         const wsUrl = new URL(window.location);
@@ -25,6 +39,15 @@ document.addEventListener("DASAvailable", () => {
     // Apply update to DOM based on method
     function applyUpdate(update) {
         if (!update.selector) return false;
+        
+        // Check if this change was made locally recently
+        const localChange = localChanges.get(update.selector);
+        if (localChange && 
+            localChange.method === update.method?.toUpperCase() &&
+            Date.now() - localChange.timestamp < CHANGE_TIMEOUT) {
+            console.log('Ignoring local change echoed from WebSocket:', update.selector);
+            return false;
+        }
         
         const target = document.querySelector(update.selector);
         if (!target) return false;
@@ -215,6 +238,19 @@ document.addEventListener("DASAvailable", () => {
                     }
                 }
             });
+        }
+    });
+    
+    // Listen for local DAS operations to track them
+    document.addEventListener('DASOk', (event) => {
+        const { selector, method, content } = event.detail || {};
+        if (selector && method) {
+            localChanges.set(selector, {
+                timestamp: Date.now(),
+                method: method.toUpperCase(),
+                content: content || null
+            });
+            console.log('Tracked local change:', { selector, method });
         }
     });
     
