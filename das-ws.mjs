@@ -1,6 +1,9 @@
 // DOM-Aware WebSocket streaming extension
 // Requires dom-aware-primitives to be loaded first
 
+// Debug flag - set window.DAS_WS_DEBUG = true to enable console logging
+const DEBUG = window.DAS_WS_DEBUG || false;
+
 // Wait for DAS availability before extending
 document.addEventListener("DASAvailable", () => {
     
@@ -45,7 +48,7 @@ document.addEventListener("DASAvailable", () => {
         if (localChange && 
             localChange.method === update.method?.toUpperCase() &&
             Date.now() - localChange.timestamp < CHANGE_TIMEOUT) {
-            console.log('Ignoring local change echoed from WebSocket:', update.selector);
+            if (DEBUG) console.log('Ignoring local change echoed from WebSocket:', update.selector);
             return false;
         }
         
@@ -111,7 +114,7 @@ document.addEventListener("DASAvailable", () => {
                     ws = new WebSocket(getWebSocketUrl());
                     
                     ws.onopen = () => {
-                        console.log('DAS WebSocket connected');
+                        if (DEBUG) console.log('DAS WebSocket connected');
                         currentReconnectDelay = reconnectDelay; // Reset delay on successful connection
                         
                         // Dispatch custom event
@@ -160,7 +163,7 @@ document.addEventListener("DASAvailable", () => {
                     };
                     
                     ws.onclose = () => {
-                        console.log('DAS WebSocket disconnected');
+                        if (DEBUG) console.log('DAS WebSocket disconnected');
                         
                         // Dispatch custom event
                         const evt = new CustomEvent("DASWebSocketDisconnected", { 
@@ -173,7 +176,7 @@ document.addEventListener("DASAvailable", () => {
                         // Attempt to reconnect if not intentionally closed
                         if (reconnect && !isIntentionallyClosed) {
                             reconnectTimeout = setTimeout(() => {
-                                console.log(`Attempting to reconnect in ${currentReconnectDelay}ms...`);
+                                if (DEBUG) console.log(`Attempting to reconnect in ${currentReconnectDelay}ms...`);
                                 connect();
                                 // Exponential backoff
                                 currentReconnectDelay = Math.min(currentReconnectDelay * 2, maxReconnectDelay);
@@ -258,7 +261,7 @@ document.addEventListener("DASAvailable", () => {
                         method: method,
                         content: args[0] || null
                     });
-                    console.log('Pre-tracking local change:', { selector, method });
+                    if (DEBUG) console.log('Pre-tracking local change:', { selector, method });
                     
                     // Call the original method
                     return originalMethods[method].apply(this, args);
@@ -278,20 +281,20 @@ document.addEventListener("DASAvailable", () => {
     try {
         document.SUBSCRIBE({
             onUpdate: (update, result) => {
-                console.log('Auto-subscription update:', update, result);
+                if (DEBUG) console.log('Auto-subscription update:', update, result);
             },
             onError: (error) => {
-                console.error('Auto-subscription error:', error);
+                if (DEBUG) console.error('Auto-subscription error:', error);
             },
             onConnect: () => {
-                console.log('Auto-subscription connected');
+                if (DEBUG) console.log('Auto-subscription connected');
             },
             onDisconnect: () => {
-                console.log('Auto-subscription disconnected');
+                if (DEBUG) console.log('Auto-subscription disconnected');
             }
         });
     } catch (error) {
-        console.error('Failed to auto-subscribe:', error);
+        if (DEBUG) console.error('Failed to auto-subscribe:', error);
     }
 });
 
