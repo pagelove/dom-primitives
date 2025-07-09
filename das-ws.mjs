@@ -23,8 +23,13 @@ document.addEventListener("DASAvailable", () => {
     
     // Convert current URL to WebSocket URL
     function getWebSocketUrl() {
-        const wsUrl = new URL(window.location);
+        const wsUrl = new URL(window.location.href);
         wsUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        
+        // For DOM-aware servers, we keep the full path including .html files
+        // The server should handle WebSocket upgrades at the same path as HTTP requests
+        if (DEBUG) console.log('WebSocket URL:', wsUrl.toString());
+        
         return wsUrl.toString();
     }
     
@@ -186,6 +191,7 @@ document.addEventListener("DASAvailable", () => {
                     
                 } catch (error) {
                     console.error('Failed to create WebSocket:', error);
+                    console.error('Attempted URL:', getWebSocketUrl());
                     onError?.(error);
                 }
             }
