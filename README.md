@@ -1,6 +1,6 @@
 # dom-aware-primitives
 
-A JavaScript library that extends HTML elements with HTTP-style methods (GET, HEAD, POST, PUT, PATCH, DELETE) to enable direct communication with DOM-aware servers. This revolutionary approach treats the HTML document itself as a hypermedia API, unifying the human-readable web with machine-readable services.
+A JavaScript library that extends HTML elements with HTTP-style methods (GET, HEAD, POST, PUT, DELETE) to enable direct communication with DOM-aware servers. This revolutionary approach treats the HTML document itself as a hypermedia API, unifying the human-readable web with machine-readable services.
 
 ## The Vision
 
@@ -88,15 +88,6 @@ const response = await element.POST(formData);
 // Replace element on server
 const response = await element.PUT();
 // Sends element's outerHTML with Range: selector=<element-selector>
-```
-
-#### PATCH
-```javascript
-// Send JSON data
-const response = await element.PATCH({ 
-  action: 'update', 
-  data: { color: 'blue' } 
-});
 ```
 
 #### DELETE

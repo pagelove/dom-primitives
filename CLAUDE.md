@@ -31,7 +31,7 @@ This library implements a profound paradigm shift in web architecture:
 
 ## Overview
 
-This is a client-side JavaScript library that adds HTTP-style methods (GET, HEAD, POST, PUT, PATCH, DELETE) to HTML elements for communicating with DOM-aware servers (DAS). The library extends HTMLElement.prototype to enable direct HTTP operations on DOM elements.
+This is a client-side JavaScript library that adds HTTP-style methods (GET, HEAD, POST, PUT, DELETE) to HTML elements for communicating with DOM-aware servers (DAS). The library extends HTMLElement.prototype to enable direct HTTP operations on DOM elements.
 
 ## Architecture
 
