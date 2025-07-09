@@ -241,18 +241,31 @@ document.addEventListener("DASAvailable", () => {
         }
     });
     
-    // Listen for local DAS operations to track them
-    document.addEventListener('DASOk', (event) => {
-        const { selector, method, content } = event.detail || {};
-        if (selector && method) {
-            localChanges.set(selector, {
-                timestamp: Date.now(),
-                method: method.toUpperCase(),
-                content: content || null
+    // Wrap the HTTP methods to track operations BEFORE they execute
+    const originalMethods = {};
+    
+    // Wait a tick to ensure DAS methods are defined
+    setTimeout(() => {
+        ['POST', 'PUT', 'DELETE'].forEach(method => {
+            originalMethods[method] = HTMLElement.prototype[method];
+            Object.defineProperty(HTMLElement.prototype, method, {
+                configurable: true,
+                value: async function(...args) {
+                    // Track this operation immediately
+                    const selector = this.selector;
+                    localChanges.set(selector, {
+                        timestamp: Date.now(),
+                        method: method,
+                        content: args[0] || null
+                    });
+                    console.log('Pre-tracking local change:', { selector, method });
+                    
+                    // Call the original method
+                    return originalMethods[method].apply(this, args);
+                }
             });
-            console.log('Tracked local change:', { selector, method });
-        }
-    });
+        });
+    }, 0);
     
     // Dispatch event to signal WebSocket extension is ready
     const evt = new CustomEvent("DASWebSocketAvailable", { 
