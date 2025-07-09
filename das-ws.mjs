@@ -35,64 +35,97 @@ document.addEventListener("DASAvailable", () => {
     
     // Parse microdata from StreamItem
     function parseStreamItem(itemElement) {
-        const method = itemElement.querySelector('[itemprop="method"]')?.textContent;
-        const url = itemElement.querySelector('[itemprop="url"]')?.textContent;
-        const selector = itemElement.querySelector('[itemprop="selector"]')?.textContent;
-        const contentElement = itemElement.querySelector('[itemprop="content"]');
-        const content = contentElement?.innerHTML;
-        
-        return { method, url, selector, content };
+        try {
+            const method = itemElement.querySelector('[itemprop="method"]')?.textContent;
+            const url = itemElement.querySelector('[itemprop="url"]')?.textContent;
+            const selector = itemElement.querySelector('[itemprop="selector"]')?.textContent;
+            const contentElement = itemElement.querySelector('[itemprop="content"]');
+            const content = contentElement?.innerHTML;
+            
+            return { method, url, selector, content };
+        } catch (error) {
+            console.error('DOM-aware WebSocket: Failed to parse StreamItem:', error);
+            return null;
+        }
     }
     
     // Apply update to DOM based on method
     function applyUpdate(update) {
-        if (!update.selector) return false;
+        try {
+            if (!update || !update.selector) return false;
+            
+            // Check if this change was made locally recently
+            const localChange = localChanges.get(update.selector);
+            if (localChange && 
+                localChange.method === update.method?.toUpperCase() &&
+                Date.now() - localChange.timestamp < CHANGE_TIMEOUT) {
+                if (DEBUG) console.log('Ignoring local change echoed from WebSocket:', update.selector);
+                return false;
+            }
+            
+            let target;
+            try {
+                target = document.querySelector(update.selector);
+            } catch (selectorError) {
+                console.error('DOM-aware WebSocket: Invalid selector:', update.selector, selectorError);
+                return false;
+            }
+            
+            if (!target) {
+                if (DEBUG) console.log('DOM-aware WebSocket: Target element not found:', update.selector);
+                return false;
+            }
         
-        // Check if this change was made locally recently
-        const localChange = localChanges.get(update.selector);
-        if (localChange && 
-            localChange.method === update.method?.toUpperCase() &&
-            Date.now() - localChange.timestamp < CHANGE_TIMEOUT) {
-            if (DEBUG) console.log('Ignoring local change echoed from WebSocket:', update.selector);
+            switch(update.method?.toUpperCase()) {
+                case 'PUT':
+                    if (update.content) {
+                        try {
+                            // Create a temporary container to parse the content
+                            const temp = document.createElement('div');
+                            temp.innerHTML = update.content;
+                            const newElement = temp.firstElementChild;
+                            if (newElement && target.parentNode) {
+                                target.parentNode.replaceChild(newElement, target);
+                                return { action: 'replaced', element: newElement };
+                            }
+                        } catch (error) {
+                            console.error('DOM-aware WebSocket: Failed to apply PUT update:', error);
+                        }
+                    }
+                    break;
+                    
+                case 'POST':
+                    if (update.content) {
+                        try {
+                            // Parse content into DOM nodes
+                            const temp = document.createElement('div');
+                            temp.innerHTML = update.content;
+                            // Append all child nodes
+                            while (temp.firstChild) {
+                                target.appendChild(temp.firstChild);
+                            }
+                            return { action: 'appended', element: target };
+                        } catch (error) {
+                            console.error('DOM-aware WebSocket: Failed to apply POST update:', error);
+                        }
+                    }
+                    break;
+                    
+                case 'DELETE':
+                    try {
+                        target.remove();
+                        return { action: 'deleted', selector: update.selector };
+                    } catch (error) {
+                        console.error('DOM-aware WebSocket: Failed to apply DELETE update:', error);
+                    }
+                    break;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('DOM-aware WebSocket: Failed to apply update:', error);
             return false;
         }
-        
-        const target = document.querySelector(update.selector);
-        if (!target) return false;
-        
-        switch(update.method?.toUpperCase()) {
-            case 'PUT':
-                if (update.content) {
-                    // Create a temporary container to parse the content
-                    const temp = document.createElement('div');
-                    temp.innerHTML = update.content;
-                    const newElement = temp.firstElementChild;
-                    if (newElement) {
-                        target.parentNode.replaceChild(newElement, target);
-                        return { action: 'replaced', element: newElement };
-                    }
-                }
-                break;
-                
-            case 'POST':
-                if (update.content) {
-                    // Parse content into DOM nodes
-                    const temp = document.createElement('div');
-                    temp.innerHTML = update.content;
-                    // Append all child nodes
-                    while (temp.firstChild) {
-                        target.appendChild(temp.firstChild);
-                    }
-                    return { action: 'appended', element: target };
-                }
-                break;
-                
-            case 'DELETE':
-                target.remove();
-                return { action: 'deleted', selector: update.selector };
-        }
-        
-        return false;
     }
     
     // Main subscription method on Document
@@ -143,17 +176,19 @@ document.addEventListener("DASAvailable", () => {
                             
                             streamItems.forEach(itemElement => {
                                 const update = parseStreamItem(itemElement);
-                                const result = applyUpdate(update);
-                                
-                                if (result) {
-                                    // Dispatch custom event for successful update
-                                    const evt = new CustomEvent("DASStreamUpdate", {
-                                        bubbles: true,
-                                        detail: { update, result }
-                                    });
-                                    document.dispatchEvent(evt);
+                                if (update) {  // parseStreamItem might return null on error
+                                    const result = applyUpdate(update);
                                     
-                                    onUpdate?.(update, result);
+                                    if (result) {
+                                        // Dispatch custom event for successful update
+                                        const evt = new CustomEvent("DASStreamUpdate", {
+                                            bubbles: true,
+                                            detail: { update, result }
+                                        });
+                                        document.dispatchEvent(evt);
+                                        
+                                        onUpdate?.(update, result);
+                                    }
                                 }
                             });
                         } catch (error) {

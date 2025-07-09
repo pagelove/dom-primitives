@@ -156,10 +156,10 @@ The library includes an optional WebSocket extension (`das-ws.mjs`) that enables
 
 ```html
 <!-- Include the main library first -->
-<script type="module" src="https://cdn.jsdelivr.net/gh/yourname/dom-aware-primitives@main/index.mjs"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/jamesaduncan/dom-aware-primitives@v1.0.0/index.mjs"></script>
 
 <!-- Then include the WebSocket extension -->
-<script type="module" src="https://cdn.jsdelivr.net/gh/yourname/dom-aware-primitives@main/das-ws.mjs"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/jamesaduncan/dom-aware-primitives@v1.0.0/das-ws.mjs"></script>
 ```
 
 ### Automatic Subscription
