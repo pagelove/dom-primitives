@@ -224,6 +224,26 @@ document.addEventListener("DASAvailable", () => {
         detail: {} 
     });
     document.dispatchEvent(evt);
+    
+    // Automatically subscribe to the current page
+    try {
+        document.SUBSCRIBE({
+            onUpdate: (update, result) => {
+                console.log('Auto-subscription update:', update, result);
+            },
+            onError: (error) => {
+                console.error('Auto-subscription error:', error);
+            },
+            onConnect: () => {
+                console.log('Auto-subscription connected');
+            },
+            onDisconnect: () => {
+                console.log('Auto-subscription disconnected');
+            }
+        });
+    } catch (error) {
+        console.error('Failed to auto-subscribe:', error);
+    }
 });
 
 // If DAS is not available, provide stub implementations
