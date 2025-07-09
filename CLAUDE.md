@@ -44,13 +44,26 @@ This is a client-side JavaScript library that adds HTTP-style methods (GET, HEAD
      - DAS-aware mode: Full HTTP operations using CSS selectors
      - Non-DAS mode: Methods dispatch 'DASUnavailable' events
 
-2. **Element Selector Generation** - Custom `selector` property that generates unique CSS selectors for any element
+2. **das-ws.mjs** - WebSocket streaming extension that:
+   - Automatically subscribes to the current page when loaded
+   - Establishes WebSocket connection at the same URL (converts http:// to ws://)
+   - Listens for DOM updates in microdata format (StreamItem)
+   - Applies real-time changes (POST, PUT, DELETE) to the DOM
+   - Prevents re-application of local changes through operation tracking
+   - Handles automatic reconnection with exponential backoff
+   - Extends both Document and HTMLElement prototypes with SUBSCRIBE method
 
-3. **Event System**:
+3. **Element Selector Generation** - Custom `selector` property that generates unique CSS selectors for any element
+
+4. **Event System**:
    - `DASAvailable` - Fired when DOM-aware server is detected
    - `DASUnavailable` - Fired when server is not DOM-aware or operations fail
    - `DASOk` - Fired on successful HTTP operations
    - `DASError` - Fired on failed HTTP operations
+   - `DASWebSocketAvailable` - Fired when WebSocket extension is loaded
+   - `DASWebSocketConnected` - Fired when WebSocket connection established
+   - `DASWebSocketDisconnected` - Fired when WebSocket connection closed
+   - `DASStreamUpdate` - Fired when DOM update is applied from stream
 
 ### Key Concepts
 
@@ -60,6 +73,25 @@ This is a client-side JavaScript library that adds HTTP-style methods (GET, HEAD
   - Falls back to nearest parent with ID (e.g., `#container > div:nth-child(2)`)
   - Only uses full path when no IDs exist
 - **Progressive Enhancement**: Library works with or without DOM-aware server support
+
+### WebSocket Streaming Architecture
+
+The WebSocket extension (`das-ws.mjs`) implements real-time DOM synchronization:
+
+1. **Automatic Connection** - Connects to the same URL as the page (http:// → ws://)
+2. **Microdata Protocol** - Expects updates as HTML with StreamItem microdata:
+   ```html
+   <div itemscope itemtype="http://rustybeam.net/StreamItem">
+     <span itemprop="method">PUT</span>
+     <span itemprop="selector">#todo-1</span>
+     <div itemprop="content">
+       <li id="todo-1" class="completed">Updated item</li>
+     </div>
+   </div>
+   ```
+3. **Local Change Tracking** - Prevents echo by tracking operations before they execute
+4. **Smart Reconnection** - Exponential backoff from 1s to 30s max
+5. **Debug Mode** - Set `window.DAS_WS_DEBUG = true` for verbose logging
 
 ## Development Commands
 

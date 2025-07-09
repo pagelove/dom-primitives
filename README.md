@@ -148,6 +148,80 @@ console.log(element.selector);
 
 This selector is used in the Range header to identify elements on the server.
 
+## WebSocket Streaming Extension
+
+The library includes an optional WebSocket extension (`das-ws.mjs`) that enables real-time streaming updates from DOM-aware servers. When included, it automatically subscribes to the current page and applies server-sent DOM updates in real-time.
+
+### Including the WebSocket Extension
+
+```html
+<!-- Include the main library first -->
+<script type="module" src="https://cdn.jsdelivr.net/gh/yourname/dom-aware-primitives@main/index.mjs"></script>
+
+<!-- Then include the WebSocket extension -->
+<script type="module" src="https://cdn.jsdelivr.net/gh/yourname/dom-aware-primitives@main/das-ws.mjs"></script>
+```
+
+### Automatic Subscription
+
+When loaded on a DOM-aware server, the extension automatically:
+- Establishes a WebSocket connection to the current page URL
+- Listens for streaming updates in microdata format
+- Applies DOM changes (POST, PUT, DELETE) in real-time
+- Prevents re-application of local changes (avoiding echo effects)
+- Handles reconnection with exponential backoff
+
+### Manual Subscription Control
+
+You can also manually control subscriptions:
+
+```javascript
+// Subscribe to the entire document
+const subscription = document.SUBSCRIBE({
+  onUpdate: (update, result) => {
+    console.log('DOM updated:', update);
+  },
+  onConnect: () => {
+    console.log('WebSocket connected');
+  },
+  onDisconnect: () => {
+    console.log('WebSocket disconnected');
+  },
+  onError: (error) => {
+    console.error('WebSocket error:', error);
+  }
+});
+
+// Subscribe to a specific element
+const elementSubscription = element.SUBSCRIBE({
+  onUpdate: (update, result) => {
+    // Only receives updates for this specific element
+    console.log('Element updated:', update);
+  }
+});
+
+// Control the subscription
+subscription.close();        // Close connection
+subscription.reconnect();    // Force reconnection
+subscription.send(data);     // Send data to server
+```
+
+### WebSocket Events
+
+The extension dispatches these events:
+
+- `DASWebSocketAvailable` - WebSocket extension is loaded and ready
+- `DASWebSocketConnected` - WebSocket connection established
+- `DASWebSocketDisconnected` - WebSocket connection closed
+- `DASStreamUpdate` - DOM update applied from stream
+
+### Debugging
+
+Enable debug logging by setting:
+```javascript
+window.DAS_WS_DEBUG = true;
+```
+
 ## Server Implementation
 
 For this library to work fully, your server needs to:
