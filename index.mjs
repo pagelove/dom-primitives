@@ -432,12 +432,12 @@ class HttpCan extends HTMLElement {
     }
     
     async checkPermissions() {
-        const method = this.getAttribute('method');
+        const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
         const selector = this.getAttribute('selector');
         const href = this.getAttribute('href');
         
-        // Method is always required, but selector is only required if no href is provided
-        if (!method || (!selector && !href)) {
+        // At least one of selector or href is required
+        if (!selector && !href) {
             this.hideContent();
             return;
         }
@@ -465,6 +465,9 @@ class HttpCan extends HTMLElement {
                 allowedMethods = cachedResult;
             } else {
                 // Make OPTIONS request
+                if (window.HTTP_CAN_DEBUG) {
+                    console.log('http-can: Making OPTIONS request', { selector, href, url: href || window.location.href });
+                }
                 allowedMethods = await this.fetchAllowedMethods(selector, href);
                 
                 // Cache the result

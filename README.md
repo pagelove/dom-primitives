@@ -262,6 +262,11 @@ The library includes an `<http-can>` WebComponent that conditionally displays co
   <a href="/admin">Admin Panel</a>
 </http-can>
 
+<!-- Method defaults to GET when not specified -->
+<http-can href="/auth/">
+  <a href="/auth/" class="admin-link">Administration</a>
+</http-can>
+
 <!-- Check permissions for selector on different page -->
 <http-can method="DELETE" selector="#comment-42" href="/posts/123">
   <button>Delete Comment</button>
@@ -275,7 +280,7 @@ The library includes an `<http-can>` WebComponent that conditionally displays co
 
 ### Attributes
 
-- `method` - HTTP method(s) to check, comma-separated for multiple (required, case-insensitive)
+- `method` - HTTP method(s) to check, comma-separated for multiple (optional, defaults to GET, case-insensitive)
 - `selector` - CSS selector to check permissions for (required unless href is provided) 
 - `href` - URL to send the OPTIONS request to (optional, defaults to current page)
 - `cache-ttl` - Cache duration in seconds (default: 300)

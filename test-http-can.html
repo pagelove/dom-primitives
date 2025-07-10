@@ -171,6 +171,12 @@
             </div>
         </http-can>
         
+        <http-can href="/auth/">
+            <div class="status allowed">
+                Auth access available (no method specified, defaults to GET)
+            </div>
+        </http-can>
+        
         <http-can method="DELETE" selector="#comment-42" href="/posts/123">
             <div class="status allowed">
                 Can delete comment #42 on /posts/123 (both selector and href)
