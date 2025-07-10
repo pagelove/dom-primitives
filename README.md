@@ -74,26 +74,25 @@ const response = await element.HEAD();
 
 #### POST
 ```javascript
-// Append HTML content
+// Append HTML content to element
 const response = await element.POST('<div>New content</div>');
-
-// Or send FormData
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-const response = await element.POST(formData);
+// Sends the HTML with Range: selector=<element-selector>
+// If server responds with HTML content, it's automatically appended to the element
 ```
 
 #### PUT
 ```javascript
-// Replace element on server
+// Replace element
 const response = await element.PUT();
 // Sends element's outerHTML with Range: selector=<element-selector>
+// If server responds with HTML content, the element is replaced with the response
 ```
 
 #### DELETE
 ```javascript
-// Remove element from server
+// Delete element
 const response = await element.DELETE();
+// If successful (2xx response), the element is automatically removed from the DOM
 ```
 
 ### Non-DOM-Aware Mode
@@ -296,7 +295,7 @@ For this library to work fully, your server needs to:
 2. Parse Range headers with CSS selectors (e.g., `Range: selector=div > p:nth-child(2)`)
 3. Return appropriate `Allow` header for OPTIONS requests with Range headers
 4. Handle standard HTTP methods on your endpoints
-5. Process HTML content and FormData payloads
+5. Process HTML content payloads
 
 Example server response for OPTIONS with Range header:
 ```
