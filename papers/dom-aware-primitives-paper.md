@@ -2,7 +2,7 @@
 
 ## Abstract
 
-We present DOM-Aware Primitives, a client-side JavaScript library that extends HTML elements with HTTP methods (GET, POST, PUT, DELETE) to enable direct communication with DOM-Aware Servers (DAS). This approach treats HTML documents as both user interfaces and APIs, using CSS selectors as resource identifiers and standard HTTP methods for state manipulation. By eliminating the traditional separation between HTML for humans and JSON APIs for machines, this architecture simplifies web development while enabling new patterns for real-time collaboration, progressive enhancement, and semantic web applications.
+We present DOM-Aware Primitives, a client-side JavaScript library that extends HTML elements with HTTP methods (GET, POST, PUT, DELETE) to enable direct communication with DOM-Aware Servers (DAS). This approach treats HTML documents as both user interfaces and APIs, using CSS selectors as resource identifiers and standard HTTP methods for state manipulation. The architecture includes a novel capability discovery mechanism using OPTIONS requests with Range headers, enabling progressive user interfaces that adapt to user permissions in real-time. By eliminating the traditional separation between HTML for humans and JSON APIs for machines, this architecture simplifies web development while enabling new patterns for real-time collaboration, progressive enhancement, and semantic web applications.
 
 ## 1. Introduction
 
@@ -251,6 +251,76 @@ The architecture leverages standard HTTP security mechanisms:
 
 This approach ensures that security implementations remain consistent with existing web standards while keeping sensitive logic on the server where it belongs.
 
+### 5.4 Capability Discovery and Progressive UI
+
+Traditional web applications often expose all interface elements regardless of user permissions, relying on server-side rejection of unauthorized actions. This approach leads to poor user experience when users attempt operations they cannot perform. DOM-Aware Primitives introduces a capability discovery mechanism that enables truly progressive user interfaces.
+
+#### The OPTIONS Method for Fine-Grained Discovery
+
+The HTTP OPTIONS method, traditionally used to discover allowed methods for entire resources, gains new power when combined with Range headers:
+
+```
+OPTIONS /document.html HTTP/1.1
+Range: selector=#delete-button
+```
+
+The server response indicates which methods are permitted for that specific element:
+
+```
+HTTP/1.1 200 OK
+Allow: GET, POST
+Accept-Ranges: selector
+```
+
+This fine-grained capability discovery enables clients to understand permissions at the element level rather than the document level, providing unprecedented granularity in authorization feedback.
+
+#### The http-can Web Component
+
+The library includes an `<http-can>` Web Component that leverages this capability discovery to conditionally display interface elements:
+
+```html
+<http-can method="DELETE" selector="#comment-42">
+  <button onclick="document.querySelector('#comment-42').DELETE()">
+    Delete Comment
+  </button>
+</http-can>
+```
+
+The component:
+1. Issues an OPTIONS request with the specified selector
+2. Parses the Allow header from the response
+3. Shows the contained elements only if the requested method is allowed
+4. Caches responses to minimize server requests
+
+This declarative approach to permission-based UI has several advantages:
+
+- **Security through opacity**: Users only see actions they can perform
+- **Reduced user frustration**: No clicking buttons that will fail
+- **Simplified client code**: Permissions handled declaratively in HTML
+- **Server authority**: All permission decisions remain server-side
+
+#### Theoretical Implications
+
+This capability discovery mechanism represents a significant advancement in web application security and usability:
+
+1. **Principle of Least Privilege in UI**: By showing only permitted actions, interfaces naturally implement the principle of least privilege at the presentation layer.
+
+2. **Self-Documenting Interfaces**: The UI itself becomes a form of documentation, accurately reflecting the current user's capabilities without external documentation.
+
+3. **Dynamic Permission Models**: As permissions change (through role updates, time-based access, or contextual factors), the UI automatically adapts without client-side updates.
+
+4. **Reduced Attack Surface**: Hidden elements cannot be manipulated through browser developer tools or automated scripts, as they never reach the client.
+
+#### Implementation Considerations
+
+The http-can component implements several optimizations:
+
+- **Intelligent Caching**: OPTIONS responses are cached with configurable TTLs to balance freshness with performance
+- **Request Deduplication**: Multiple components checking the same selector/method combination share a single request
+- **Fail-Closed Design**: Elements remain hidden until permissions are confirmed, ensuring security by default
+
+This capability discovery system transforms authorization from a hidden backend concern into a first-class architectural component that directly improves user experience while maintaining security.
+
 ## 6. Challenges and Considerations
 
 ### 6.1 Browser Compatibility
@@ -304,13 +374,14 @@ Future capabilities might include:
 - WebSocket fallback for real-time updates
 - Conflict-free replicated data type (CRDT) integration
 - Offline synchronization queues
-- Implementation of additional HTTP methods (PATCH, OPTIONS)
+- Implementation of additional HTTP methods (PATCH)
+- Extended capability negotiation protocols
 
 ## 9. Conclusion
 
-DOM-Aware Primitives represents a return to the web's foundational principles while addressing modern development needs. By treating HTML elements as HTTP-accessible resources, we eliminate the artificial separation between human and machine interfaces. This approach simplifies development, enables new collaborative patterns, and provides a path toward truly semantic web applications.
+DOM-Aware Primitives represents a return to the web's foundational principles while addressing modern development needs. By treating HTML elements as HTTP-accessible resources, we eliminate the artificial separation between human and machine interfaces. The capability discovery mechanism through OPTIONS requests enables interfaces that dynamically adapt to user permissions, implementing security through opacity while improving user experience. This approach simplifies development, enables new collaborative patterns, and provides a path toward truly semantic web applications.
 
-The architecture demonstrates that powerful web applications need not require complex API layers. Instead, by embracing HTML as a hypermedia format and implementing proper REST constraints, we can build systems that are simultaneously simpler and more capable than current approaches.
+The architecture demonstrates that powerful web applications need not require complex API layers. Instead, by embracing HTML as a hypermedia format, implementing proper REST constraints, and leveraging HTTP's built-in capability discovery mechanisms, we can build systems that are simultaneously simpler, more secure, and more capable than current approaches.
 
 ## References
 
