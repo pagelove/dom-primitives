@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>http-can WebComponent Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f5f5f5;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #e0e0e0;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #f0f0f0;
+        }
+        .allowed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .denied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #event-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9em;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .log-allowed { color: green; }
+        .log-denied { color: red; }
+        .log-error { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>http-can WebComponent Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Single Method Check</h2>
+        <p>This button is only shown if DELETE is allowed on #test-element</p>
+        
+        <http-can method="DELETE" selector="#test-element">
+            <button onclick="handleDelete()">Delete Test Element</button>
+        </http-can>
+        
+        <div id="test-element" class="status">
+            This is the test element (#test-element)
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Multiple Methods (AND logic)</h2>
+        <p>These admin controls are only shown if BOTH PUT and DELETE are allowed</p>
+        
+        <http-can method="PUT,DELETE" selector=".admin-section">
+            <div class="admin-controls">
+                <button onclick="handleEdit()">Edit (PUT)</button>
+                <button onclick="handleDelete()">Delete</button>
+            </div>
+        </http-can>
+        
+        <div class="admin-section status">
+            Admin section content
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Custom Loading Indicator</h2>
+        <p>Shows a custom loading spinner during permission check</p>
+        
+        <http-can method="POST" selector="#comments-section" cache-ttl="30">
+            <span slot="loading">
+                <div class="loading-indicator"></div>
+                Checking permissions...
+            </span>
+            <form onsubmit="handleSubmit(event)">
+                <textarea placeholder="Add a comment..."></textarea>
+                <button type="submit">Post Comment</button>
+            </form>
+        </http-can>
+        
+        <div id="comments-section" class="status">
+            Comments section
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Dynamic Attribute Changes</h2>
+        <p>Change the method and selector to see reactive updates</p>
+        
+        <div>
+            <label>Method: 
+                <input type="text" id="dynamic-method" value="GET">
+            </label>
+            <label>Selector: 
+                <input type="text" id="dynamic-selector" value="#dynamic-target">
+            </label>
+            <button onclick="updateDynamicAttributes()">Update</button>
+        </div>
+        
+        <http-can id="dynamic-can" method="GET" selector="#dynamic-target">
+            <div class="status allowed">
+                This content is visible when the method is allowed!
+            </div>
+        </http-can>
+        
+        <div id="dynamic-target" class="status">
+            Dynamic target element
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Invalid Selector</h2>
+        <p>Should hide content when selector is invalid or missing</p>
+        
+        <http-can method="GET" selector="">
+            <div class="status">
+                This should not be visible (missing selector)
+            </div>
+        </http-can>
+        
+        <http-can method="GET" selector="#non-existent-element">
+            <div class="status">
+                This might not be visible (non-existent element)
+            </div>
+        </http-can>
+    </div>
+
+    <div class="test-section">
+        <h2>Event Log</h2>
+        <div id="event-log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <!-- Import the main library which includes http-can -->
+    <script type="module">
+        import './index.mjs';
+        
+        // Event logging
+        const log = document.getElementById('event-log');
+        
+        function addLogEntry(message, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            log.insertBefore(entry, log.firstChild);
+        }
+        
+        // Listen for http-can events
+        document.addEventListener('http-can-allowed', (e) => {
+            addLogEntry(`Allowed: ${e.detail.methods.join(',')} on ${e.detail.selector}`, 'allowed');
+        });
+        
+        document.addEventListener('http-can-denied', (e) => {
+            addLogEntry(`Denied: ${e.detail.requested.join(',')} on ${e.detail.selector} (allowed: ${e.detail.allowed.join(',')})`, 'denied');
+        });
+        
+        document.addEventListener('http-can-error', (e) => {
+            addLogEntry(`Error: ${e.detail.error} for ${e.detail.selector}`, 'error');
+        });
+        
+        // Test functions
+        window.handleDelete = function() {
+            alert('Delete action triggered');
+        };
+        
+        window.handleEdit = function() {
+            alert('Edit action triggered');
+        };
+        
+        window.handleSubmit = function(event) {
+            event.preventDefault();
+            alert('Comment submitted');
+        };
+        
+        window.updateDynamicAttributes = function() {
+            const can = document.getElementById('dynamic-can');
+            const method = document.getElementById('dynamic-method').value;
+            const selector = document.getElementById('dynamic-selector').value;
+            
+            can.setAttribute('method', method);
+            can.setAttribute('selector', selector);
+            
+            addLogEntry(`Updated attributes - method: ${method}, selector: ${selector}`);
+        };
+        
+        window.clearLog = function() {
+            log.innerHTML = '';
+        };
+        
+        // Initial log entry
+        addLogEntry('Page loaded - http-can component ready');
+        
+        // Test cache behavior
+        setTimeout(() => {
+            addLogEntry('Testing cache: Creating duplicate http-can elements...');
+            
+            // Create a duplicate element to test caching
+            const duplicate = document.createElement('http-can');
+            duplicate.setAttribute('method', 'DELETE');
+            duplicate.setAttribute('selector', '#test-element');
+            duplicate.innerHTML = '<span>Cached permission check</span>';
+            document.querySelector('.test-section').appendChild(duplicate);
+            
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -222,18 +222,87 @@ Enable debug logging by setting:
 window.DAS_WS_DEBUG = true;
 ```
 
+## HTTP-Can WebComponent
+
+The library includes an `<http-can>` WebComponent that conditionally displays content based on HTTP method permissions. It makes OPTIONS requests with Range headers to check what methods are allowed on specific elements. This component is automatically available when you include the main library - no additional imports needed.
+
+### Basic Usage
+
+```html
+<!-- Single method check -->
+<http-can method="DELETE" selector="#todo-item">
+  <button onclick="document.querySelector('#todo-item').DELETE()">
+    Delete Todo
+  </button>
+</http-can>
+
+<!-- Multiple methods (AND logic - all must be allowed) -->
+<http-can method="PUT,DELETE" selector=".admin-panel">
+  <div class="admin-controls">
+    <button>Edit</button>
+    <button>Delete</button>
+  </div>
+</http-can>
+
+<!-- With custom cache TTL (in seconds) -->
+<http-can method="POST" selector="#comments" cache-ttl="60">
+  <form>
+    <textarea name="comment"></textarea>
+    <button type="submit">Post Comment</button>
+  </form>
+</http-can>
+
+<!-- With loading indicator -->
+<http-can method="DELETE" selector="#item">
+  <span slot="loading">Checking permissions...</span>
+  <button>Delete</button>
+</http-can>
+```
+
+### Attributes
+
+- `method` - HTTP method(s) to check, comma-separated for multiple (required)
+- `selector` - CSS selector to check permissions for (required) 
+- `cache-ttl` - Cache duration in seconds (default: 300)
+
+### Events
+
+The component dispatches these events:
+
+- `http-can-allowed` - Permissions granted
+- `http-can-denied` - Permissions denied
+- `http-can-error` - Request failed
+
+```javascript
+document.addEventListener('http-can-denied', (event) => {
+  console.log('Access denied:', event.detail);
+  // { requested: ['PUT', 'DELETE'], allowed: ['GET'], selector: '#item' }
+});
+```
+
+### Features
+
+- **Fail-closed security** - Content hidden by default until permissions verified
+- **Smart caching** - Reduces redundant OPTIONS requests
+- **Reactive** - Re-checks when attributes change
+- **AND logic** - Multiple methods all must be allowed
+- **Shadow DOM** - Encapsulated styling and structure
+
 ## Server Implementation
 
 For this library to work fully, your server needs to:
 
 1. Respond to OPTIONS requests with `Accept-Ranges: selector` header
 2. Parse Range headers with CSS selectors (e.g., `Range: selector=div > p:nth-child(2)`)
-3. Handle standard HTTP methods on your endpoints
-4. Process HTML content and FormData payloads
+3. Return appropriate `Allow` header for OPTIONS requests with Range headers
+4. Handle standard HTTP methods on your endpoints
+5. Process HTML content and FormData payloads
 
-Example server response headers:
+Example server response for OPTIONS with Range header:
 ```
+HTTP/1.1 200 OK
 Accept-Ranges: selector
+Allow: GET, POST, PUT, DELETE
 Content-Type: text/html
 ```
 

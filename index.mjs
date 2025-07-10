@@ -362,3 +362,225 @@ if (window.location.server.DASAware) {
     const evt = new CustomEvent("DASUnavailable", { bubbles: true, detail: {} });
     document.dispatchEvent(evt);
 }
+
+/*
+    http-can WebComponent
+    A custom element that conditionally shows content based on HTTP method permissions
+*/
+
+class HttpCan extends HTMLElement {
+    // Static cache for OPTIONS responses
+    // Key format: "METHOD1,METHOD2:selector" -> { allowed: Set<string>, timestamp: number }
+    static cache = new Map();
+    
+    // Default cache TTL in seconds
+    static DEFAULT_CACHE_TTL = 300; // 5 minutes
+    
+    // Observe these attributes for changes
+    static get observedAttributes() {
+        return ['method', 'selector', 'cache-ttl'];
+    }
+    
+    constructor() {
+        super();
+        
+        // Create shadow DOM
+        this.attachShadow({ mode: 'open' });
+        
+        // Create slot for content (hidden by default)
+        this.shadowRoot.innerHTML = `
+            <style>
+                :host {
+                    display: contents;
+                }
+                #content {
+                    display: none;
+                }
+                #content.allowed {
+                    display: contents;
+                }
+                #loading {
+                    display: none;
+                }
+                #loading.active {
+                    display: inline-block;
+                }
+            </style>
+            <div id="loading" part="loading">
+                <slot name="loading"><!-- Optional loading content --></slot>
+            </div>
+            <div id="content" part="content">
+                <slot></slot>
+            </div>
+        `;
+        
+        this.contentDiv = this.shadowRoot.getElementById('content');
+        this.loadingDiv = this.shadowRoot.getElementById('loading');
+        this.checkInProgress = false;
+    }
+    
+    connectedCallback() {
+        // Check permissions when element is added to DOM
+        this.checkPermissions();
+    }
+    
+    attributeChangedCallback(name, oldValue, newValue) {
+        // Re-check permissions when relevant attributes change
+        if (oldValue !== newValue && (name === 'method' || name === 'selector')) {
+            this.checkPermissions();
+        }
+    }
+    
+    async checkPermissions() {
+        const method = this.getAttribute('method');
+        const selector = this.getAttribute('selector');
+        
+        // Both method and selector are required
+        if (!method || !selector) {
+            this.hideContent();
+            return;
+        }
+        
+        // Prevent concurrent checks
+        if (this.checkInProgress) {
+            return;
+        }
+        
+        this.checkInProgress = true;
+        this.showLoading();
+        
+        try {
+            // Get list of methods to check (comma-separated)
+            const methodsToCheck = method.split(',').map(m => m.trim().toUpperCase());
+            
+            // Check cache first
+            const cacheKey = this.getCacheKey(methodsToCheck, selector);
+            const cachedResult = this.getCachedResult(cacheKey);
+            
+            let allowedMethods;
+            
+            if (cachedResult) {
+                allowedMethods = cachedResult;
+            } else {
+                // Make OPTIONS request
+                allowedMethods = await this.fetchAllowedMethods(selector);
+                
+                // Cache the result
+                this.setCachedResult(cacheKey, allowedMethods);
+            }
+            
+            // Check if ALL requested methods are allowed (AND logic)
+            const allMethodsAllowed = methodsToCheck.every(m => allowedMethods.has(m));
+            
+            if (allMethodsAllowed) {
+                this.showContent();
+                this.dispatchEvent(new CustomEvent('http-can-allowed', {
+                    bubbles: true,
+                    detail: { methods: methodsToCheck, selector }
+                }));
+            } else {
+                this.hideContent();
+                this.dispatchEvent(new CustomEvent('http-can-denied', {
+                    bubbles: true,
+                    detail: { 
+                        requested: methodsToCheck, 
+                        allowed: Array.from(allowedMethods),
+                        selector 
+                    }
+                }));
+            }
+            
+        } catch (error) {
+            // On error, hide content (fail-closed)
+            this.hideContent();
+            this.dispatchEvent(new CustomEvent('http-can-error', {
+                bubbles: true,
+                detail: { error: error.message, selector }
+            }));
+        } finally {
+            this.hideLoading();
+            this.checkInProgress = false;
+        }
+    }
+    
+    async fetchAllowedMethods(selector) {
+        const headers = new Headers();
+        headers.set('Range', `selector=${selector}`);
+        
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'OPTIONS',
+                headers: headers
+            });
+            
+            if (!response.ok) {
+                throw new Error(`OPTIONS request failed with status ${response.status}`);
+            }
+            
+            // Parse Allow header
+            const allowHeader = response.headers.get('Allow');
+            if (!allowHeader) {
+                return new Set();
+            }
+            
+            // Split by comma and normalize
+            const methods = allowHeader.split(',')
+                .map(m => m.trim().toUpperCase())
+                .filter(m => m.length > 0);
+            
+            return new Set(methods);
+            
+        } catch (error) {
+            console.error('http-can: Failed to fetch permissions:', error);
+            throw error;
+        }
+    }
+    
+    getCacheKey(methods, selector) {
+        // Normalize methods array to consistent string
+        const methodStr = methods.sort().join(',');
+        return `${methodStr}:${selector}`;
+    }
+    
+    getCachedResult(cacheKey) {
+        const cached = HttpCan.cache.get(cacheKey);
+        if (!cached) return null;
+        
+        const ttl = parseInt(this.getAttribute('cache-ttl') || HttpCan.DEFAULT_CACHE_TTL) * 1000;
+        const now = Date.now();
+        
+        // Check if cache is still valid
+        if (now - cached.timestamp > ttl) {
+            HttpCan.cache.delete(cacheKey);
+            return null;
+        }
+        
+        return cached.allowed;
+    }
+    
+    setCachedResult(cacheKey, allowedMethods) {
+        HttpCan.cache.set(cacheKey, {
+            allowed: allowedMethods,
+            timestamp: Date.now()
+        });
+    }
+    
+    showContent() {
+        this.contentDiv.classList.add('allowed');
+    }
+    
+    hideContent() {
+        this.contentDiv.classList.remove('allowed');
+    }
+    
+    showLoading() {
+        this.loadingDiv.classList.add('active');
+    }
+    
+    hideLoading() {
+        this.loadingDiv.classList.remove('active');
+    }
+}
+
+// Register the custom element
+customElements.define('http-can', HttpCan);
