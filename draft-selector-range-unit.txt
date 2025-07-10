@@ -1,0 +1,571 @@
+
+
+
+Internet Engineering Task Force (IETF)                        J. Duncan
+Internet-Draft                                              Independent
+Intended status: Standards Track                        January 10, 2025
+Expires: July 14, 2025
+
+
+                CSS Selector Range Unit for HTTP Range Requests
+                      draft-duncan-selector-range-00
+
+Abstract
+
+   This document defines a new range unit "selector" for use in HTTP
+   Range requests and responses.  The selector range unit allows
+   clients to request specific portions of HTML and XML documents based
+   on CSS selectors, enabling fine-grained addressing of document
+   elements.  This specification extends the byte-range mechanism
+   defined in RFC 7233 to support structured document manipulation.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on July 14, 2025.
+
+Copyright Notice
+
+   Copyright (c) 2025 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 1]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Requirements Language . . . . . . . . . . . . . . . . . .   3
+   2.  Selector Range Unit . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Syntax  . . . . . . . . . . . . . . . . . . . . . . . . .   3
+     2.2.  Semantics . . . . . . . . . . . . . . . . . . . . . . . .   4
+   3.  Range Requests  . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.1.  Request Examples  . . . . . . . . . . . . . . . . . . . .   4
+   4.  Range Responses . . . . . . . . . . . . . . . . . . . . . . .   5
+     4.1.  206 Partial Content . . . . . . . . . . . . . . . . . . .   5
+     4.2.  416 Range Not Satisfiable . . . . . . . . . . . . . . . .   5
+     4.3.  Response Examples . . . . . . . . . . . . . . . . . . . .   6
+   5.  Accept-Ranges Header Field  . . . . . . . . . . . . . . . . .   6
+   6.  Content-Range Header Field  . . . . . . . . . . . . . . . . .   7
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
+     7.1.  Selector Injection  . . . . . . . . . . . . . . . . . . .   7
+     7.2.  Information Disclosure  . . . . . . . . . . . . . . . . .   8
+     7.3.  Resource Consumption  . . . . . . . . . . . . . . . . . .   8
+   8.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   8
+     8.1.  Range Unit Registration . . . . . . . . . . . . . . . . .   8
+   9.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
+     9.1.  Normative References  . . . . . . . . . . . . . . . . . .   9
+     9.2.  Informative References  . . . . . . . . . . . . . . . . .   9
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  10
+
+1.  Introduction
+
+   HTTP Range requests, as defined in [RFC7233], allow clients to
+   request specific portions of resources.  Currently, the primary range
+   unit is "bytes", which works well for binary resources but is less
+   suitable for structured documents like HTML or XML.
+
+   This specification introduces a "selector" range unit that uses CSS
+   selectors [SELECTORS-4] to identify specific elements within HTML and
+   XML documents.  This enables:
+
+   o  Fine-grained updates to specific document elements
+   o  Bandwidth-efficient partial document transfers
+   o  Element-level caching and validation
+   o  Direct manipulation of DOM structures via HTTP
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 2]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+   The selector range unit is designed to work with existing HTTP
+   infrastructure while providing new capabilities for web applications
+   that treat HTML documents as both user interfaces and data
+   structures.
+
+1.1.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+2.  Selector Range Unit
+
+   The "selector" range unit identifies portions of HTML or XML
+   documents using CSS selectors.  When used in a Range header field,
+   it specifies which elements within the document should be included
+   in the request or response.
+
+2.1.  Syntax
+
+   The syntax for selector range specifications uses the following ABNF
+   [RFC5234]:
+
+   selector-range-spec = selector-spec
+   selector-spec       = "selector=" css-selector
+   css-selector        = 1*( unreserved / pct-encoded / selector-chars )
+   selector-chars      = ":" / "[" / "]" / "." / "#" / " " / ">" / 
+                         "+" / "~" / "*" / "," / "(" / ")" / "="
+   unreserved          = ALPHA / DIGIT / "-" / "_"
+   pct-encoded         = "%" HEXDIG HEXDIG
+
+   Examples of valid selector range specifications:
+
+   o  selector=#header
+   o  selector=.nav-menu
+   o  selector=#content > p:first-child
+   o  selector=[data-id="12345"]
+   o  selector=#header p, #footer p
+
+   Note that certain characters in CSS selectors MUST be percent-encoded
+   when used in HTTP headers to avoid conflicts with HTTP syntax.
+
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 3]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+2.2.  Semantics
+
+   A selector range specification identifies zero or one element within
+   an HTML or XML document.  The server processes the selector against
+   its representation of the resource and returns the first matching
+   element in document order.
+
+   Servers MUST use standard CSS selector matching rules as defined in
+   [SELECTORS-4].  If multiple elements match the selector, only the
+   first matching element in document order MUST be returned.
+
+   The selector is evaluated against the current state of the resource
+   at the time of the request.  If the document structure changes
+   between requests, the same selector may match different elements.
+
+3.  Range Requests
+
+   A client requests a selector range by including a Range header field
+   with the selector range unit:
+
+   Range: selector=#content
+
+   Each Range header field MUST contain exactly one selector range
+   specification.  Multiple selector range specifications within a
+   single Range header are not supported.
+
+   Note that CSS selectors themselves may contain comma-separated
+   selector groups (e.g., "#foo p, section p"), which are valid within
+   a single selector specification.  When any selector (including those
+   with comma-separated groups) matches multiple elements in the
+   document, only the FIRST matching element in document order is
+   selected and returned.
+
+   Servers that support selector ranges MUST:
+
+   o  Parse the selector from the Range header
+   o  Evaluate the selector against the target resource
+   o  Return the first matched element or an appropriate error response
+
+3.1.  Request Examples
+
+   Example 1: Request a specific element by ID
+
+   GET /index.html HTTP/1.1
+   Host: example.com
+   Range: selector=#main-article
+
+   Example 2: Request the first paragraph within a specific section
+
+   GET /index.html HTTP/1.1
+   Host: example.com
+   Range: selector=#content p
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 4]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+   Example 3: Request elements with specific attributes
+
+   GET /products.html HTTP/1.1
+   Host: example.com
+   Range: selector=[data-category="electronics"]
+
+   Example 4: Request using selector group (comma-separated selectors)
+
+   GET /index.html HTTP/1.1
+   Host: example.com
+   Range: selector=#header p, #footer p
+
+4.  Range Responses
+
+   Servers that support selector ranges respond to valid range requests
+   with either a 206 (Partial Content) status code for successful
+   matches or a 416 (Range Not Satisfiable) status code when no
+   elements match the selector.
+
+4.1.  206 Partial Content
+
+   When an element matches the selector, the server responds with a 206
+   status code and includes:
+
+   o  The matched element in the response body
+   o  A Content-Range header indicating which selector was satisfied
+   o  A Content-Type header appropriate for the returned content
+
+   The response body contains the outerHTML representation of the first
+   matched element in document order.
+
+4.2.  416 Range Not Satisfiable
+
+   When no elements match the provided selector, the server MUST respond
+   with a 416 status code.  The response SHOULD include a Content-Range
+   header field with an unsatisfied-range value:
+
+   Content-Range: selector */
+
+   This indicates that the selector range unit is supported but the
+   specific selector matched no elements.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 5]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+4.3.  Response Examples
+
+   Example 1: Successful selector match
+
+   HTTP/1.1 206 Partial Content
+   Content-Type: text/html; charset=utf-8
+   Content-Range: selector=#main-article
+   Content-Length: 1234
+
+   <article id="main-article">
+     <h1>Article Title</h1>
+     <p>Article content...</p>
+   </article>
+
+   Example 2: First element matched when multiple exist
+
+   HTTP/1.1 206 Partial Content
+   Content-Type: text/html; charset=utf-8
+   Content-Range: selector=.comment
+   Content-Length: 1234
+
+   <div class="comment">
+     <p>First comment (only the first matching element returned)</p>
+   </div>
+
+   Example 3: No elements matched
+
+   HTTP/1.1 416 Range Not Satisfiable
+   Content-Range: selector */
+
+5.  Accept-Ranges Header Field
+
+   Servers advertise their support for range units through the Accept-
+   Ranges header field.  A server MAY support any combination of range
+   units, including:
+
+   o  Neither byte ranges nor selector ranges (Accept-Ranges: none)
+   o  Only byte ranges (Accept-Ranges: bytes)
+   o  Only selector ranges (Accept-Ranges: selector)
+   o  Both byte and selector ranges (Accept-Ranges: bytes, selector)
+
+   Examples:
+
+   Accept-Ranges: bytes, selector
+   Accept-Ranges: selector
+   Accept-Ranges: none
+
+   Support for selector ranges is independent of support for byte
+   ranges.  A server that supports selector ranges is NOT REQUIRED to
+   support byte ranges, and vice versa.  Clients SHOULD check the
+   Accept-Ranges header to determine which range units are supported
+   before attempting range requests.
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 6]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+6.  Content-Range Header Field
+
+   The Content-Range header field for selector ranges uses the following
+   syntax:
+
+   Content-Range: selector=<css-selector>
+
+   For unsatisfied ranges:
+
+   Content-Range: selector */
+
+   Unlike byte ranges, selector ranges do not include size information
+   because the size of structured elements is not meaningful in the same
+   way as byte counts.
+
+7.  Security Considerations
+
+   Implementations of selector range units must consider several security
+   aspects:
+
+7.1.  Selector Injection
+
+   CSS selectors provided by clients MUST be carefully validated to
+   prevent injection attacks.  Servers SHOULD:
+
+   o  Validate selector syntax before processing
+   o  Limit selector complexity to prevent excessive processing
+   o  Sanitize error messages to avoid information disclosure
+   o  Consider implementing a whitelist of allowed selector patterns
+
+   Example of dangerous selector that could cause performance issues:
+
+   Range: selector=*:nth-child(n+1):nth-child(n+2):nth-child(n+3)
+
+   Servers SHOULD impose limits on:
+   
+   o  Maximum selector length
+   o  Number of combinators and pseudo-classes
+   o  Use of universal selectors
+   o  Complex pseudo-class expressions
+
+
+
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 7]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+7.2.  Information Disclosure
+
+   Selector ranges could potentially be used to probe document structure
+   and discover hidden elements.  Servers MUST ensure that selector
+   range requests respect the same access controls as full document
+   requests:
+
+   o  Authentication and authorization MUST be checked before processing
+     selectors
+   o  Elements that would not be visible in the full document response
+     MUST NOT be returned via selector ranges
+   o  Error responses SHOULD NOT reveal information about document
+     structure to unauthorized clients
+
+7.3.  Resource Consumption
+
+   Complex selectors or selectors matching many elements could consume
+   significant server resources.  Implementations SHOULD:
+
+   o  Set timeouts for selector evaluation
+   o  Limit the number of elements returned in a single response
+   o  Implement rate limiting for selector range requests
+   o  Monitor and log suspicious selector patterns
+
+8.  IANA Considerations
+
+8.1.  Range Unit Registration
+
+   This document registers the following range unit in the "HTTP Range
+   Unit Registry" defined by [RFC7233]:
+
+   Range Unit Name: selector
+
+   Description: CSS selector-based range unit for structured documents
+
+   Reference: This document
+
+   The registration template is:
+
+   o  Name: selector
+   o  Description: Identifies elements in HTML/XML documents using CSS
+     selectors
+   o  Reference: [this document]
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 8]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+9.  References
+
+9.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC5234]  Crocker, D., Ed. and P. Overell, "Augmented BNF for
+              Syntax Specifications: ABNF", STD 68, RFC 5234,
+              DOI 10.17487/RFC5234, January 2008,
+              <https://www.rfc-editor.org/info/rfc5234>.
+
+   [RFC7233]  Fielding, R., Ed., Lafon, Y., Ed., and J. Reschke, Ed.,
+              "Hypertext Transfer Protocol (HTTP/1.1): Range Requests",
+              RFC 7233, DOI 10.17487/RFC7233, June 2014,
+              <https://www.rfc-editor.org/info/rfc7233>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [SELECTORS-4]
+              Etemad, E. J., Ed., Rivoal, F., Ed., "Selectors Level 4",
+              W3C Working Draft, 21 November 2022,
+              <https://www.w3.org/TR/selectors-4/>.
+
+9.2.  Informative References
+
+   [HTML]     WHATWG, "HTML Living Standard",
+              <https://html.spec.whatwg.org/>.
+
+   [CSS3-SELECTORS]
+              Tantek, C., Ed., Etemad, E. J., Ed., "Selectors Level 3",
+              W3C Recommendation, 6 November 2018,
+              <https://www.w3.org/TR/selectors-3/>.
+
+   [DOM]      WHATWG, "DOM Living Standard",
+              <https://dom.spec.whatwg.org/>.
+
+
+
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                  [Page 9]
+
+Internet-Draft          CSS Selector Range Unit             January 2025
+
+
+Author's Address
+
+   James Duncan
+   Independent
+
+   Email: james@dun.can
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Duncan                   Expires July 14, 2025                 [Page 10]
