@@ -378,7 +378,7 @@ class HttpCan extends HTMLElement {
     
     // Observe these attributes for changes
     static get observedAttributes() {
-        return ['method', 'selector', 'cache-ttl'];
+        return ['method', 'selector', 'cache-ttl', 'href'];
     }
     
     constructor() {
@@ -426,7 +426,7 @@ class HttpCan extends HTMLElement {
     
     attributeChangedCallback(name, oldValue, newValue) {
         // Re-check permissions when relevant attributes change
-        if (oldValue !== newValue && (name === 'method' || name === 'selector')) {
+        if (oldValue !== newValue && (name === 'method' || name === 'selector' || name === 'href')) {
             this.checkPermissions();
         }
     }
@@ -434,9 +434,10 @@ class HttpCan extends HTMLElement {
     async checkPermissions() {
         const method = this.getAttribute('method');
         const selector = this.getAttribute('selector');
+        const href = this.getAttribute('href');
         
-        // Both method and selector are required
-        if (!method || !selector) {
+        // Method is always required, but selector is only required if no href is provided
+        if (!method || (!selector && !href)) {
             this.hideContent();
             return;
         }
@@ -450,11 +451,12 @@ class HttpCan extends HTMLElement {
         this.showLoading();
         
         try {
-            // Get list of methods to check (comma-separated)
-            const methodsToCheck = method.split(',').map(m => m.trim().toUpperCase());
+            // Get list of methods to check (comma-separated, case-insensitive)
+            const methodsToCheck = method.toLowerCase().split(',').map(m => m.trim().toUpperCase());
             
-            // Check cache first
-            const cacheKey = this.getCacheKey(methodsToCheck, selector);
+            // Generate cache key based on methods and either selector or href
+            const targetKey = href || selector;
+            const cacheKey = this.getCacheKey(methodsToCheck, targetKey, href ? 'href' : 'selector');
             const cachedResult = this.getCachedResult(cacheKey);
             
             let allowedMethods;
@@ -463,7 +465,7 @@ class HttpCan extends HTMLElement {
                 allowedMethods = cachedResult;
             } else {
                 // Make OPTIONS request
-                allowedMethods = await this.fetchAllowedMethods(selector);
+                allowedMethods = await this.fetchAllowedMethods(selector, href);
                 
                 // Cache the result
                 this.setCachedResult(cacheKey, allowedMethods);
@@ -476,7 +478,7 @@ class HttpCan extends HTMLElement {
                 this.showContent();
                 this.dispatchEvent(new CustomEvent('http-can-allowed', {
                     bubbles: true,
-                    detail: { methods: methodsToCheck, selector }
+                    detail: { methods: methodsToCheck, selector, href }
                 }));
             } else {
                 this.hideContent();
@@ -485,7 +487,8 @@ class HttpCan extends HTMLElement {
                     detail: { 
                         requested: methodsToCheck, 
                         allowed: Array.from(allowedMethods),
-                        selector 
+                        selector,
+                        href
                     }
                 }));
             }
@@ -495,7 +498,7 @@ class HttpCan extends HTMLElement {
             this.hideContent();
             this.dispatchEvent(new CustomEvent('http-can-error', {
                 bubbles: true,
-                detail: { error: error.message, selector }
+                detail: { error: error.message, selector, href }
             }));
         } finally {
             this.hideLoading();
@@ -503,12 +506,17 @@ class HttpCan extends HTMLElement {
         }
     }
     
-    async fetchAllowedMethods(selector) {
+    async fetchAllowedMethods(selector, href) {
         const headers = new Headers();
-        headers.set('Range', `selector=${selector}`);
+        
+        // Use href parameter when provided, otherwise use selector with current page
+        const url = href || window.location.href;
+        if (!href && selector) {
+            headers.set('Range', `selector=${selector}`);
+        }
         
         try {
-            const response = await fetch(window.location.href, {
+            const response = await fetch(url, {
                 method: 'OPTIONS',
                 headers: headers
             });
@@ -536,10 +544,10 @@ class HttpCan extends HTMLElement {
         }
     }
     
-    getCacheKey(methods, selector) {
+    getCacheKey(methods, target, type = 'selector') {
         // Normalize methods array to consistent string
         const methodStr = methods.sort().join(',');
-        return `${methodStr}:${selector}`;
+        return `${methodStr}:${type}:${target}`;
     }
     
     getCachedResult(cacheKey) {

@@ -138,6 +138,9 @@
             <label>Selector: 
                 <input type="text" id="dynamic-selector" value="#dynamic-target">
             </label>
+            <label>href: 
+                <input type="text" id="dynamic-href" value="" placeholder="Optional URL">
+            </label>
             <button onclick="updateDynamicAttributes()">Update</button>
         </div>
         
@@ -153,7 +156,35 @@
     </div>
 
     <div class="test-section">
-        <h2>Test 5: Invalid Selector</h2>
+        <h2>Test 5: href Attribute Test</h2>
+        <p>Test checking permissions on arbitrary URLs instead of selectors</p>
+        
+        <http-can method="GET" href="/api/admin">
+            <div class="status allowed">
+                Admin API access is available
+            </div>
+        </http-can>
+        
+        <http-can method="post" href="/api/users">
+            <div class="status allowed">
+                User creation API is available (lowercase method)
+            </div>
+        </http-can>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 6: Case-Insensitive Methods</h2>
+        <p>Test that methods work regardless of case</p>
+        
+        <http-can method="get,POST,Put" selector="#test-element">
+            <div class="status allowed">
+                Mixed case methods: GET, POST, PUT allowed
+            </div>
+        </http-can>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 7: Invalid Selector</h2>
         <p>Should hide content when selector is invalid or missing</p>
         
         <http-can method="GET" selector="">
@@ -220,11 +251,17 @@
             const can = document.getElementById('dynamic-can');
             const method = document.getElementById('dynamic-method').value;
             const selector = document.getElementById('dynamic-selector').value;
+            const href = document.getElementById('dynamic-href').value;
             
             can.setAttribute('method', method);
             can.setAttribute('selector', selector);
+            if (href) {
+                can.setAttribute('href', href);
+            } else {
+                can.removeAttribute('href');
+            }
             
-            addLogEntry(`Updated attributes - method: ${method}, selector: ${selector}`);
+            addLogEntry(`Updated attributes - method: ${method}, selector: ${selector}, href: ${href || 'none'}`);
         };
         
         window.clearLog = function() {

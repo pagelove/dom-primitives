@@ -256,12 +256,23 @@ The library includes an `<http-can>` WebComponent that conditionally displays co
   <span slot="loading">Checking permissions...</span>
   <button>Delete</button>
 </http-can>
+
+<!-- Check permissions on arbitrary URL -->
+<http-can method="GET" href="/api/admin">
+  <a href="/admin">Admin Panel</a>
+</http-can>
+
+<!-- Mixed case methods are supported -->
+<http-can method="put,Delete" selector="#content">
+  <button>Edit Content</button>
+</http-can>
 ```
 
 ### Attributes
 
-- `method` - HTTP method(s) to check, comma-separated for multiple (required)
-- `selector` - CSS selector to check permissions for (required) 
+- `method` - HTTP method(s) to check, comma-separated for multiple (required, case-insensitive)
+- `selector` - CSS selector to check permissions for (required unless href is provided) 
+- `href` - URL to check permissions for instead of using selector (optional)
 - `cache-ttl` - Cache duration in seconds (default: 300)
 
 ### Events
