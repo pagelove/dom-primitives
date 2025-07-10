@@ -262,6 +262,11 @@ The library includes an `<http-can>` WebComponent that conditionally displays co
   <a href="/admin">Admin Panel</a>
 </http-can>
 
+<!-- Check permissions for selector on different page -->
+<http-can method="DELETE" selector="#comment-42" href="/posts/123">
+  <button>Delete Comment</button>
+</http-can>
+
 <!-- Mixed case methods are supported -->
 <http-can method="put,Delete" selector="#content">
   <button>Edit Content</button>
@@ -272,8 +277,10 @@ The library includes an `<http-can>` WebComponent that conditionally displays co
 
 - `method` - HTTP method(s) to check, comma-separated for multiple (required, case-insensitive)
 - `selector` - CSS selector to check permissions for (required unless href is provided) 
-- `href` - URL to check permissions for instead of using selector (optional)
+- `href` - URL to send the OPTIONS request to (optional, defaults to current page)
 - `cache-ttl` - Cache duration in seconds (default: 300)
+
+Note: When both `selector` and `href` are provided, the selector is still sent in the Range header, but the OPTIONS request is sent to the specified href URL instead of the current page.
 
 ### Events
 

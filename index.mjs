@@ -509,11 +509,13 @@ class HttpCan extends HTMLElement {
     async fetchAllowedMethods(selector, href) {
         const headers = new Headers();
         
-        // Use href parameter when provided, otherwise use selector with current page
-        const url = href || window.location.href;
-        if (!href && selector) {
+        // Always set Range header if selector is provided
+        if (selector) {
             headers.set('Range', `selector=${selector}`);
         }
+        
+        // Use href parameter when provided, otherwise use current page
+        const url = href || window.location.href;
         
         try {
             const response = await fetch(url, {

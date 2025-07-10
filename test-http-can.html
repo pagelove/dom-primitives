@@ -157,17 +157,23 @@
 
     <div class="test-section">
         <h2>Test 5: href Attribute Test</h2>
-        <p>Test checking permissions on arbitrary URLs instead of selectors</p>
+        <p>Test checking permissions on arbitrary URLs</p>
         
         <http-can method="GET" href="/api/admin">
             <div class="status allowed">
-                Admin API access is available
+                Admin API access is available (no selector, just href)
             </div>
         </http-can>
         
         <http-can method="post" href="/api/users">
             <div class="status allowed">
-                User creation API is available (lowercase method)
+                User creation API is available (lowercase method, no selector)
+            </div>
+        </http-can>
+        
+        <http-can method="DELETE" selector="#comment-42" href="/posts/123">
+            <div class="status allowed">
+                Can delete comment #42 on /posts/123 (both selector and href)
             </div>
         </http-can>
     </div>
