@@ -240,9 +240,48 @@ Enable debug logging by setting:
 window.DAS_WS_DEBUG = true;
 ```
 
-## HTTP-Can WebComponent
+## Permission Checking
 
-The library includes an `<http-can>` WebComponent that conditionally displays content based on HTTP method permissions. It makes OPTIONS requests with Range headers to check what methods are allowed on specific elements. This component is automatically available when you include the main library - no additional imports needed.
+The library provides two ways to check HTTP method permissions:
+
+### JavaScript API: window.server.can()
+
+Check permissions programmatically using Selector-Request syntax:
+
+```javascript
+// Check method on a path (relative to current server)
+const canGet = await window.server.can('GET', '/api/users');
+
+// Check method on absolute URL
+const canPost = await window.server.can('POST', 'https://api.example.com/posts');
+
+// Check method on a selector (current page)
+const canDelete = await window.server.can('DELETE', '#(selector=#comment-42)');
+
+// Check method on a selector at specific URL
+const canEdit = await window.server.can('PUT', 'https://example.com/page#(selector=.editable)');
+
+// Check multiple methods (AND logic - all must be allowed)
+const canManage = await window.server.can(['GET', 'PUT'], '#(selector=#content)');
+
+// With custom cache TTL (in seconds)
+const canUpdate = await window.server.can('POST', '/api/posts#(selector=.new-post)', { ttl: 60 });
+
+// The API returns true/false
+if (await window.server.can('DELETE', '#(selector=#item-123)')) {
+    // Show delete button
+}
+```
+
+**Selector-Request Syntax:**
+- `/path` - Check permissions on path relative to current server
+- `http://example.com/path` - Check permissions on absolute URL
+- `#(selector=.className)` - Check permissions for selector on current page
+- `http://example.com/path#(selector=#id)` - Check permissions for selector on specific URL
+
+### HTTP-Can WebComponent
+
+The `<http-can>` WebComponent conditionally displays content based on HTTP method permissions. It makes OPTIONS requests with Range headers to check what methods are allowed on specific elements. This component is automatically available when you include the main library - no additional imports needed.
 
 ### Basic Usage
 
@@ -324,10 +363,12 @@ document.addEventListener('http-can-denied', (event) => {
 ### Features
 
 - **Fail-closed security** - Content hidden by default until permissions verified
-- **Smart caching** - Reduces redundant OPTIONS requests
+- **Smart caching** - Reduces redundant OPTIONS requests (shared with window.server.can())
 - **Reactive** - Re-checks when attributes change
 - **AND logic** - Multiple methods all must be allowed
 - **Shadow DOM** - Encapsulated styling and structure
+
+Note: Both `window.server.can()` and `<http-can>` share the same permission cache, so checking the same permissions through either API will reuse cached results.
 
 ## Server Implementation
 
