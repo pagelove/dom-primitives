@@ -15,7 +15,10 @@ window.server.can = async function(methods, target, options = {}) {
     // can(["GET", "POST"], "/path", { ttl: 60 })
     
     let selector, href, cacheTTL;
-    
+    if (!target) {
+        target = window.location.href; // Default to current page if no target provided
+    }
+
     // Parse Selector-Request syntax
     const selectorMatch = target.match(/#\(selector=([^)]+)\)$/);
     
