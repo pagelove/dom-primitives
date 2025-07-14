@@ -74,8 +74,27 @@ const response = await element.HEAD();
 
 #### POST
 ```javascript
-// Append HTML content to element
+// Append HTML content to element - accepts string, HTMLElement, or DocumentFragment
+
+// String
 const response = await element.POST('<div>New content</div>');
+
+// HTMLElement
+const newDiv = document.createElement('div');
+newDiv.textContent = 'New content';
+newDiv.className = 'highlight';
+await element.POST(newDiv);
+
+// DocumentFragment
+const fragment = document.createDocumentFragment();
+const p = document.createElement('p');
+p.textContent = 'Paragraph 1';
+fragment.appendChild(p);
+const span = document.createElement('span');
+span.textContent = 'Span content';
+fragment.appendChild(span);
+await element.POST(fragment);
+
 // Sends the HTML with Range: selector=<element-selector>
 // If server responds with HTML content, it's automatically appended to the element
 ```

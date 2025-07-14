@@ -29,6 +29,23 @@ function recreateResponse(html, response) {
     return newResponse;
 }
 
+function serializeContent(content) {
+    if (typeof content === 'string') {
+        return content;
+    } else if (content instanceof HTMLElement) {
+        return content.outerHTML;
+    } else if (content instanceof DocumentFragment) {
+        // Create a temporary div to serialize fragment
+        const temp = document.createElement('div');
+        temp.appendChild(content.cloneNode(true));
+        return temp.innerHTML;
+    } else if (content === undefined || content === null) {
+        throw new Error('POST requires data to be provided');
+    } else {
+        throw new Error('POST data must be a string, HTMLElement, or DocumentFragment');
+    }
+}
+
 Object.defineProperty(HTMLElement.prototype, "GET", {
     configurable: true,
     value: function() {
@@ -185,16 +202,15 @@ document.addEventListener("DASAvailable", () => {
     Object.defineProperty(HTMLElement.prototype, "POST", {
         value: async function( postData ) {
             try {
-                if (postData === undefined || postData === null) {
-                    throw new Error('POST requires data to be provided');
-                }
+                // Serialize the content to HTML string
+                const htmlContent = serializeContent(postData);
                 
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
                 headers.set("Content-Type", "text/html");
                 const response = await fetch(window.location, {
                     headers,
-                    body: postData,
+                    body: htmlContent,
                     method: "POST",
                 });
 

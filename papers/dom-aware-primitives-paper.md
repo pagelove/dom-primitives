@@ -401,8 +401,11 @@ The architecture demonstrates that powerful web applications need not require co
 // Retrieve updated content from server
 await element.GET()
 
-// Append new child element
+// Append new child element (string, HTMLElement, or DocumentFragment)
 await element.POST('<div>New content</div>')
+// or
+const newEl = document.createElement('div')
+await element.POST(newEl)
 
 // Send element's current state to server
 await element.PUT()
