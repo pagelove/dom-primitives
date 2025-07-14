@@ -203,7 +203,7 @@ document.addEventListener("DASAvailable", () => {
         value: async function( postData ) {
             try {
                 // Serialize the content to HTML string
-                const htmlContent = serializeContent(postData);
+                const htmlContent = serializeContent(postData).trim();
                 
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
