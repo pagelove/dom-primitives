@@ -40,6 +40,15 @@ window.server.can = async function(methods, target, options = {}) {
         href = target;
     }
     
+    if (window.PERMISSION_DEBUG) {
+        console.log('window.server.can: Parsed target', {
+            target,
+            selector,
+            href,
+            selectorMatch
+        });
+    }
+    
     // Extract options
     cacheTTL = options.ttl || options.cacheTTL;
     
@@ -494,10 +503,21 @@ class PermissionChecker {
         // Always set Range header if selector is provided
         if (selector) {
             headers.set('Range', `selector=${selector}`);
+            if (window.PERMISSION_DEBUG) {
+                console.log('PermissionChecker: Setting Range header:', `selector=${selector}`);
+            }
         }
         
         // Use href parameter when provided, otherwise use current page
         const url = href || window.location.href;
+        
+        if (window.PERMISSION_DEBUG) {
+            console.log('PermissionChecker: Making OPTIONS request', {
+                url,
+                selector,
+                headers: [...headers.entries()]
+            });
+        }
         
         try {
             const response = await fetch(url, {
