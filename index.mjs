@@ -20,20 +20,39 @@ window.server.can = async function(methods, target, options = {}) {
     }
 
     // Parse Selector-Request syntax
-    const selectorMatch = target.match(/#\(selector=([^)]+)\)$/);
+    // Look for #(selector= pattern
+    const selectorStartIndex = target.indexOf('#(selector=');
     
-    if (selectorMatch) {
-        // Extract selector from #(selector=...) syntax
-        selector = selectorMatch[1];
-        // Remove the selector part to get the base URL/path
-        const basePath = target.substring(0, target.indexOf('#(selector='));
+    if (selectorStartIndex !== -1) {
+        // Found the selector pattern
+        const selectorStart = selectorStartIndex + 11; // Length of '#(selector='
         
-        if (basePath) {
-            // If there's a base path, use it as href
-            href = basePath;
+        // Find the matching closing parenthesis
+        let parenCount = 1;
+        let i = selectorStart;
+        while (i < target.length && parenCount > 0) {
+            if (target[i] === '(') parenCount++;
+            else if (target[i] === ')') parenCount--;
+            i++;
+        }
+        
+        if (parenCount === 0) {
+            // Successfully found matching parenthesis
+            selector = target.substring(selectorStart, i - 1);
+            
+            // Get the base path (everything before #(selector=)
+            const basePath = target.substring(0, selectorStartIndex);
+            
+            if (basePath) {
+                // If there's a base path, use it as href
+                href = basePath;
+            } else {
+                // If no base path, selector applies to current page
+                href = window.location.href;
+            }
         } else {
-            // If no base path, selector applies to current page
-            href = window.location.href;
+            // Malformed selector syntax, treat entire target as href
+            href = target;
         }
     } else {
         // No selector syntax, entire target is the href
