@@ -182,6 +182,26 @@
                 Can delete comment #42 on /posts/123 (both selector and href)
             </div>
         </http-can>
+        
+        <h3>Selector-Request Syntax in href</h3>
+        
+        <http-can method="PUT" href="/posts/123#(selector=.editable)">
+            <div class="status allowed">
+                Can edit .editable on /posts/123 (selector in href)
+            </div>
+        </http-can>
+        
+        <http-can method="DELETE" href="#(selector=#skills-list > tr:nth-child(15))">
+            <div class="status allowed">
+                Can delete specific table row (complex selector in href)
+            </div>
+        </http-can>
+        
+        <http-can method="GET" href="https://api.example.com/data#(selector=#public-info)">
+            <div class="status allowed">
+                Can access #public-info on external API (full URL with selector)
+            </div>
+        </http-can>
     </div>
 
     <div class="test-section">

@@ -279,6 +279,8 @@ if (await window.server.can('DELETE', '#(selector=#item-123)')) {
 - `#(selector=.className)` - Check permissions for selector on current page
 - `http://example.com/path#(selector=#id)` - Check permissions for selector on specific URL
 
+The Selector-Request syntax is parsed by the included `selector-request` module, which correctly handles complex CSS selectors including those with nested parentheses like `:nth-child(15)` or `:has(> p)`.
+
 ### HTTP-Can WebComponent
 
 The `<http-can>` WebComponent conditionally displays content based on HTTP method permissions. It makes OPTIONS requests with Range headers to check what methods are allowed on specific elements. This component is automatically available when you include the main library - no additional imports needed.
@@ -330,6 +332,16 @@ The `<http-can>` WebComponent conditionally displays content based on HTTP metho
   <button>Delete Comment</button>
 </http-can>
 
+<!-- Using selector-request syntax in href -->
+<http-can method="PUT" href="/posts/123#(selector=.editable)">
+  <button>Edit Post</button>
+</http-can>
+
+<!-- Selector in href for external site -->
+<http-can method="GET" href="https://api.example.com/data#(selector=#public-info)">
+  <div>Access Public Data</div>
+</http-can>
+
 <!-- Mixed case methods are supported -->
 <http-can method="put,Delete" selector="#content">
   <button>Edit Content</button>
@@ -339,11 +351,14 @@ The `<http-can>` WebComponent conditionally displays content based on HTTP metho
 ### Attributes
 
 - `method` - HTTP method(s) to check, comma-separated for multiple (optional, defaults to GET, case-insensitive)
-- `selector` - CSS selector to check permissions for (required unless href is provided) 
-- `href` - URL to send the OPTIONS request to (optional, defaults to current page)
+- `selector` - CSS selector to check permissions for (optional if href contains selector) 
+- `href` - URL to send the OPTIONS request to, supports selector-request syntax (optional, defaults to current page)
 - `cache-ttl` - Cache duration in seconds (default: 300)
 
-Note: When both `selector` and `href` are provided, the selector is still sent in the Range header, but the OPTIONS request is sent to the specified href URL instead of the current page.
+**Notes:**
+- The `href` attribute supports selector-request syntax: `/path#(selector=.className)`
+- If both `selector` attribute and selector in `href` are provided, the `selector` attribute takes precedence
+- When a selector is specified (either way), it's sent in the Range header of the OPTIONS request
 
 ### Events
 

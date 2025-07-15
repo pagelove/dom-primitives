@@ -1,3 +1,5 @@
+import { parseAndResolve } from './selector-request/index.mjs';
+
 window.location.server = { DASAware: false };
 
 // Initialize window.server if it doesn't exist
@@ -14,70 +16,27 @@ window.server.can = async function(methods, target, options = {}) {
     // can("GET", "http://example.com/path#(selector=p)")
     // can(["GET", "POST"], "/path", { ttl: 60 })
     
-    let selector, href, cacheTTL;
     if (!target) {
         target = window.location.href; // Default to current page if no target provided
     }
 
-    // Parse Selector-Request syntax
-    // Look for #(selector= pattern
-    const selectorStartIndex = target.indexOf('#(selector=');
-    
-    if (selectorStartIndex !== -1) {
-        // Found the selector pattern
-        const selectorStart = selectorStartIndex + 11; // Length of '#(selector='
-        
-        // Find the matching closing parenthesis
-        let parenCount = 1;
-        let i = selectorStart;
-        while (i < target.length && parenCount > 0) {
-            if (target[i] === '(') parenCount++;
-            else if (target[i] === ')') parenCount--;
-            i++;
-        }
-        
-        if (parenCount === 0) {
-            // Successfully found matching parenthesis
-            selector = target.substring(selectorStart, i - 1);
-            
-            // Get the base path (everything before #(selector=)
-            const basePath = target.substring(0, selectorStartIndex);
-            
-            if (basePath) {
-                // If there's a base path, use it as href
-                href = basePath;
-            } else {
-                // If no base path, selector applies to current page
-                href = window.location.href;
-            }
-        } else {
-            // Malformed selector syntax, treat entire target as href
-            href = target;
-        }
-    } else {
-        // No selector syntax, entire target is the href
-        href = target;
-    }
+    // Parse using the selector-request module
+    const parsed = parseAndResolve(target);
+    const { selector, href } = parsed;
     
     if (window.PERMISSION_DEBUG) {
         console.log('window.server.can: Parsed target', {
             target,
+            parsed,
             selector,
-            href,
-            selectorMatch
+            href
         });
     }
     
     // Extract options
-    cacheTTL = options.ttl || options.cacheTTL;
+    const cacheTTL = options.ttl || options.cacheTTL;
     
     try {
-        // Resolve relative URLs
-        if (href && !href.match(/^https?:\/\//)) {
-            // It's a relative path, resolve it
-            href = new URL(href, window.location.href).href;
-        }
-        
         const allowedMethods = await PermissionChecker.checkPermissions(methods, {
             selector,
             href,
@@ -660,9 +619,19 @@ class HttpCan extends HTMLElement {
     
     async checkPermissions() {
         const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
-        const selector = this.getAttribute('selector');
-        const href = this.getAttribute('href');
+        let selector = this.getAttribute('selector');
+        let href = this.getAttribute('href');
         const cacheTTL = parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
+        
+        // If href contains selector-request syntax, parse it
+        if (href && href.includes('#(selector=')) {
+            const parsed = parseAndResolve(href);
+            href = parsed.href;
+            // If both selector attribute and href selector exist, prefer the explicit selector attribute
+            if (!selector && parsed.selector) {
+                selector = parsed.selector;
+            }
+        }
         
         // At least one of selector or href is required
         if (!selector && !href) {
