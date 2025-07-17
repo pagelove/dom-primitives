@@ -3,7 +3,7 @@
 
 Internet Engineering Task Force (IETF)                        J. Duncan
 Internet-Draft                                              Independent
-Intended status: Standards Track                              July 2025
+Intended status: Standards Track                           July 17 2025
 Expires: July 20, 2025
 
 
