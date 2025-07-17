@@ -233,6 +233,46 @@
     </div>
 
     <div class="test-section">
+        <h2>Test 8: Closest Attribute</h2>
+        <p>Uses 'closest' attribute to find the target element for permission checking</p>
+        
+        <div id="parent-container" class="status">
+            Parent Container (#parent-container)
+            <div class="nested-level-1">
+                <div class="nested-level-2">
+                    <http-can method="DELETE" closest="#parent-container">
+                        <button onclick="alert('Delete parent container')">Delete Parent Container</button>
+                    </http-can>
+                </div>
+            </div>
+        </div>
+        
+        <div class="item-container">
+            <div id="item-123" class="item">
+                Item #123
+                <div class="item-actions">
+                    <http-can method="PUT" closest=".item">
+                        <button onclick="alert('Edit item')">Edit</button>
+                    </http-can>
+                    <http-can method="DELETE" closest=".item">
+                        <button onclick="alert('Delete item')">Delete</button>
+                    </http-can>
+                </div>
+            </div>
+        </div>
+        
+        <article id="article-42">
+            <h3>Article Title</h3>
+            <p>Article content...</p>
+            <footer>
+                <http-can method="POST" closest="article">
+                    <button onclick="alert('Comment on article')">Add Comment</button>
+                </http-can>
+            </footer>
+        </article>
+    </div>
+
+    <div class="test-section">
         <h2>Event Log</h2>
         <div id="event-log"></div>
         <button onclick="clearLog()">Clear Log</button>

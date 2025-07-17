@@ -574,7 +574,7 @@ class PermissionChecker {
 class HttpCan extends HTMLElement {
     // Observe these attributes for changes
     static get observedAttributes() {
-        return ['method', 'selector', 'cache-ttl', 'href'];
+        return ['method', 'selector', 'cache-ttl', 'href', 'closest'];
     }
     
     constructor() {
@@ -622,7 +622,7 @@ class HttpCan extends HTMLElement {
     
     attributeChangedCallback(name, oldValue, newValue) {
         // Re-check permissions when relevant attributes change
-        if (oldValue !== newValue && (name === 'method' || name === 'selector' || name === 'href')) {
+        if (oldValue !== newValue && (name === 'method' || name === 'selector' || name === 'href' || name === 'closest')) {
             this.checkPermissions();
         }
     }
@@ -630,8 +630,18 @@ class HttpCan extends HTMLElement {
     async checkPermissions() {
         const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
         let selector = this.getAttribute('selector');
+        const closest = this.getAttribute('closest');
         let href = this.getAttribute('href');
         const cacheTTL = parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
+        
+        // Handle 'closest' attribute
+        if (closest && !selector) {
+            const targetElement = this.closest(closest);
+            if (targetElement) {
+                // Generate selector for the found element
+                selector = targetElement.selector;
+            }
+        }
         
         // If href contains selector-request syntax, parse it
         if (href && href.includes('#(selector=')) {

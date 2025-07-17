@@ -317,6 +317,23 @@ The `<http-can>` WebComponent conditionally displays content based on HTTP metho
   <button>Delete</button>
 </http-can>
 
+<!-- Using 'closest' to find target element -->
+<http-can method="DELETE" closest=".item">
+  <button>Delete Item</button>
+</http-can>
+
+<!-- Nested example with closest -->
+<article id="post-123">
+  <h2>Blog Post Title</h2>
+  <p>Content...</p>
+  <footer>
+    <!-- This will check permissions on the parent article -->
+    <http-can method="PUT" closest="article">
+      <button>Edit Post</button>
+    </http-can>
+  </footer>
+</article>
+
 <!-- Check permissions on arbitrary URL -->
 <http-can method="GET" href="/api/admin">
   <a href="/admin">Admin Panel</a>
@@ -351,13 +368,16 @@ The `<http-can>` WebComponent conditionally displays content based on HTTP metho
 ### Attributes
 
 - `method` - HTTP method(s) to check, comma-separated for multiple (optional, defaults to GET, case-insensitive)
-- `selector` - CSS selector to check permissions for (optional if href contains selector) 
+- `selector` - CSS selector to check permissions for (optional if href contains selector or closest is used) 
+- `closest` - CSS selector to find the nearest ancestor element for permission checking (alternative to selector)
 - `href` - URL to send the OPTIONS request to, supports selector-request syntax (optional, defaults to current page)
 - `cache-ttl` - Cache duration in seconds (default: 300)
 
 **Notes:**
 - The `href` attribute supports selector-request syntax: `/path#(selector=.className)`
 - If both `selector` attribute and selector in `href` are provided, the `selector` attribute takes precedence
+- The `closest` attribute uses `Element.closest()` to find the target element from the http-can element's position
+- When using `closest`, the generated selector for the found element will prefer IDs for stability
 - When a selector is specified (either way), it's sent in the Range header of the OPTIONS request
 
 ### Events
