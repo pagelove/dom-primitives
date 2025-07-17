@@ -1,6 +1,6 @@
 # dom-aware-primitives
 
-A JavaScript library that extends HTML elements with HTTP-style methods (GET, HEAD, POST, PUT, DELETE) to enable direct communication with DOM-aware servers. This revolutionary approach treats the HTML document itself as a hypermedia API, unifying the human-readable web with machine-readable services.
+A JavaScript library that extends HTML elements with HTTP-style methods (GET, HEAD, POST, PUT, DELETE) to enable direct communication with DOM-aware servers. This approach treats the HTML document itself as a hypermedia API, unifying the human-readable web with machine-readable services.
 
 ## The Vision
 
@@ -563,7 +563,7 @@ async function makeEditable(element) {
 document.querySelectorAll('[data-editable]').forEach(makeEditable);
 ```
 
-## Revolutionary Possibilities
+## Enabled Possibilities
 
 ### 1. Collaborative Editing
 Every element becomes a potential collaboration point. Multiple users can edit different parts of the same document with automatic conflict resolution through HTTP status codes.
@@ -619,11 +619,11 @@ For deeper analysis and context about DOM-Aware Primitives:
    - Comprehensive technical overview of the DOM-Aware Primitives concept
    - Architectural principles and implementation details
    - Use cases and future directions
-   - Academic treatment of the paradigm shift this represents
+   - Academic treatment of the shift this represents
 
 2. **[DRAFT RFC: Selector Range Unit](/papers/draft-selector-range-unit.txt)**
-   - My first draft of an RFC to document the core HTTP mechanic that makes DOM aware primitives useful.
-    
+   - A first draft of an RFC to document the core HTTP mechanic that makes DOM aware primitives useful.
+
 ## License
 
 Apache License 2.0
