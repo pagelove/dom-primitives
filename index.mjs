@@ -213,7 +213,9 @@ document.addEventListener("DASAvailable", () => {
             try {
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
-                const response = await fetch(window.location, {
+                // Use the element's baseURI to support imported nodes
+                const url = this.baseURI || window.location.href;
+                const response = await fetch(url, {
                     headers,
                     method: "GET",
                 });
@@ -235,7 +237,9 @@ document.addEventListener("DASAvailable", () => {
             try {
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
-                const response = await fetch(window.location, {
+                // Use the element's baseURI to support imported nodes
+                const url = this.baseURI || window.location.href;
+                const response = await fetch(url, {
                     headers,
                     method: "HEAD",
                 });
@@ -262,7 +266,9 @@ document.addEventListener("DASAvailable", () => {
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
                 headers.set("Content-Type", "text/html");
-                const response = await fetch(window.location, {
+                // Use the element's baseURI to support imported nodes
+                const url = this.baseURI || window.location.href;
+                const response = await fetch(url, {
                     headers,
                     body: htmlContent,
                     method: "POST",
@@ -309,7 +315,9 @@ document.addEventListener("DASAvailable", () => {
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
                 headers.set("Content-Type", "text/html");
-                const response = await fetch(window.location, {
+                // Use the element's baseURI to support imported nodes
+                const url = this.baseURI || window.location.href;
+                const response = await fetch(url, {
                     headers,
                     body: this.outerHTML,
                     method: "PUT",
@@ -381,7 +389,9 @@ document.addEventListener("DASAvailable", () => {
             try {
                 const headers = new Headers();
                 headers.set("Range", `selector=${this.selector}`);
-                const response = await fetch(window.location, {
+                // Use the element's baseURI to support imported nodes
+                const url = this.baseURI || window.location.href;
+                const response = await fetch(url, {
                     headers,
                     method: "DELETE",
                 });

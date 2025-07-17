@@ -483,6 +483,38 @@ curl -X DELETE -H "Range: selector=.temporary" http://localhost:8080/page.html
 </script>
 ```
 
+### Advanced: Working with Imported Nodes
+
+When elements are imported from other documents (e.g., via `importNode` or from iframes), the HTTP methods automatically use the element's `baseURI` to ensure requests go to the correct server:
+
+```javascript
+// Import a node from an iframe
+const iframe = document.querySelector('iframe');
+const importedNode = document.importNode(
+    iframe.contentDocument.querySelector('#remote-content'), 
+    true
+);
+document.body.appendChild(importedNode);
+
+// This will make a request to the iframe's origin, not the current page
+await importedNode.PUT(); // Uses importedNode.baseURI
+
+// You can also work with elements from different domains
+const externalDoc = await fetch('https://other-domain.com/page.html')
+    .then(r => r.text())
+    .then(html => new DOMParser().parseFromString(html, 'text/html'));
+
+const externalElement = document.importNode(
+    externalDoc.querySelector('#external-content'),
+    true
+);
+
+// Operations on imported elements go to their original server
+await externalElement.DELETE(); // Request goes to https://other-domain.com
+```
+
+This feature enables powerful cross-document workflows while maintaining the correct server context for each element.
+
 ### Advanced: Semantic Operations with Microdata
 
 ```html
@@ -589,12 +621,9 @@ For deeper analysis and context about DOM-Aware Primitives:
    - Use cases and future directions
    - Academic treatment of the paradigm shift this represents
 
-2. **[A Comparative Analysis of DOM-Aware Primitives and htmx](/papers/dom-aware-primitives-vs-htmx-paper.md)**
-   - Detailed comparison with htmx, another hypermedia-driven library
-   - Architectural differences between declarative and imperative approaches
-   - When to use each approach
-   - Feature comparison matrix
-
+2. **[DRAFT RFC: Selector Range Unit](/papers/draft-selector-range-unit.txt)**
+   - My first draft of an RFC to document the core HTTP mechanic that makes DOM aware primitives useful.
+    
 ## License
 
 Apache License 2.0
