@@ -870,8 +870,8 @@ class HttpCannot extends HTMLElement {
             }
             
         } catch (error) {
-            // On error, show content (fail-open for cannot)
-            this.showContent();
+            // On error, hide content (we can't determine permissions)
+            this.hideContent();
             this.dispatchEvent(new CustomEvent('http-cannot-error', {
                 bubbles: true,
                 detail: { error: error.message, selector, href }
