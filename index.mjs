@@ -576,37 +576,18 @@ class HttpCan extends HTMLElement {
     static get observedAttributes() {
         return ['method', 'selector', 'cache-ttl', 'href', 'closest'];
     }
+
+    retained;
     
     constructor() {
         super();
-        
-        // Create shadow DOM for hidden content
-        this.attachShadow({ mode: 'open' });
-        
-        // Container in shadow DOM for hidden content
-        this.shadowRoot.innerHTML = `
-            <style>
-                :host {
-                    display: contents;
-                }
-            </style>
-            <div id="hidden-content"></div>
-        `;
-        
-        this.hiddenContainer = this.shadowRoot.getElementById('hidden-content');
         this.checkInProgress = false;
-        this.originalChildren = [];
     }
     
     connectedCallback() {
-        // Store original children if not already done
-        if (this.originalChildren.length === 0) {
-            this.originalChildren = Array.from(this.children);
-        }
-        
-        // Initially hide content by moving to shadow DOM
+        // retain original children, and remove them from the DOM for now.
         this.hideContent();
-        
+
         // Check permissions when element is added to DOM
         this.checkPermissions();
     }
@@ -656,7 +637,6 @@ class HttpCan extends HTMLElement {
         }
         
         this.checkInProgress = true;
-        this.showLoading();
         
         try {
             // Get list of methods to check (comma-separated)
@@ -711,26 +691,16 @@ class HttpCan extends HTMLElement {
     
     showContent() {
         // Move content from shadow DOM back to light DOM
-        while (this.hiddenContainer.firstChild) {
-            this.appendChild(this.hiddenContainer.firstChild);
-        }
+        const copy = this.retained;
+        this.retained = [];
+        copy.forEach( child => this.appendChild( child ))
     }
     
     hideContent() {
-        // Move content from light DOM to shadow DOM
+        this.retained = Array.from( this.children );
         while (this.firstChild) {
-            this.hiddenContainer.appendChild(this.firstChild);
-        }
-    }
-    
-    showLoading() {
-        // Could dispatch an event or add an attribute for external loading indicators
-        this.setAttribute('loading', '');
-    }
-    
-    hideLoading() {
-        // Remove loading attribute
-        this.removeAttribute('loading');
+            this.removeChild(this.firstChild);
+        }               
     }
 }
 
@@ -828,7 +798,6 @@ class HttpCannot extends HTMLElement {
         }
         
         this.checkInProgress = true;
-        this.showLoading();
         
         try {
             // Get list of methods to check (comma-separated)
