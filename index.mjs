@@ -674,8 +674,7 @@ class HttpCan extends HTMLElement {
                         href
                     }
                 }));
-            }
-            
+            }            
         } catch (error) {
             // On error, hide content (fail-closed)
             this.hideContent();
@@ -684,7 +683,6 @@ class HttpCan extends HTMLElement {
                 detail: { error: error.message, selector, href }
             }));
         } finally {
-            this.hideLoading();
             this.checkInProgress = false;
         }
     }
