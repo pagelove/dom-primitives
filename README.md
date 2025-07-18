@@ -405,6 +405,82 @@ document.addEventListener('http-can-denied', (event) => {
 
 Note: Both `window.server.can()` and `<http-can>` share the same permission cache, so checking the same permissions through either API will reuse cached results.
 
+### HTTP-Cannot WebComponent
+
+The `<http-cannot>` WebComponent is the inverse of `<http-can>` - it shows content when permissions are **denied**. This is useful for displaying fallback UI, help text, or upgrade prompts when users lack the required permissions.
+
+### Basic Usage
+
+```html
+<!-- Show message when DELETE is not allowed -->
+<http-cannot method="DELETE" selector="#protected-item">
+  <div class="warning">
+    You don't have permission to delete this item.
+  </div>
+</http-cannot>
+
+<!-- Show help text for restricted sections -->
+<http-cannot method="PUT,DELETE" selector=".admin-section">
+  <p>Contact an administrator to modify this section.</p>
+</http-cannot>
+
+<!-- Combine with http-can for complete UI -->
+<http-can method="PUT" selector="#profile">
+  <button>Edit Profile</button>
+</http-can>
+<http-cannot method="PUT" selector="#profile">
+  <span>Read-only access</span>
+</http-cannot>
+
+<!-- Using 'closest' attribute -->
+<article id="post-123">
+  <footer>
+    <http-can method="POST" closest="article">
+      <button>Add Comment</button>
+    </http-can>
+    <http-cannot method="POST" closest="article">
+      <span>Comments disabled</span>
+    </http-cannot>
+  </footer>
+</article>
+
+<!-- Show upgrade prompts -->
+<http-cannot method="POST" href="/api/premium">
+  <div class="upgrade-prompt">
+    🔒 Premium feature - <a href="/upgrade">Upgrade to access</a>
+  </div>
+</http-cannot>
+```
+
+### Attributes
+
+`http-cannot` supports all the same attributes as `http-can`:
+- `method` - HTTP method(s) to check (comma-separated, defaults to GET)
+- `selector` - CSS selector for the target element
+- `closest` - CSS selector to find the nearest ancestor element
+- `href` - URL to check permissions against
+- `cache-ttl` - Cache duration in seconds
+
+### Events
+
+- `http-cannot-shown` - Content shown (permissions denied)
+- `http-cannot-hidden` - Content hidden (permissions granted)
+- `http-cannot-error` - Request failed
+
+```javascript
+document.addEventListener('http-cannot-shown', (event) => {
+  console.log('Access denied:', event.detail);
+  // { requested: ['DELETE'], allowed: ['GET', 'PUT'], selector: '#item' }
+});
+```
+
+### Features
+
+- **Inverse logic** - Shows content when permissions are denied
+- **Fail-open on error** - Shows content if permission check fails
+- **Shared cache** - Reuses the same permission cache as `http-can`
+- **Same attributes** - Fully compatible with `http-can` attributes
+
 ## Server Implementation
 
 For this library to work fully, your server needs to:

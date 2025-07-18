@@ -737,3 +737,177 @@ class HttpCan extends HTMLElement {
 
 // Register the custom element
 customElements.define('http-can', HttpCan);
+
+/*
+    http-cannot WebComponent
+    A custom element that conditionally shows content when HTTP method permissions are DENIED
+    This is the inverse of http-can - it shows content when permissions are NOT granted
+*/
+
+class HttpCannot extends HTMLElement {
+    // Observe these attributes for changes
+    static get observedAttributes() {
+        return ['method', 'selector', 'cache-ttl', 'href', 'closest'];
+    }
+    
+    constructor() {
+        super();
+        
+        // Create shadow DOM
+        this.attachShadow({ mode: 'open' });
+        
+        // Create slot for content (hidden by default)
+        this.shadowRoot.innerHTML = `
+            <style>
+                :host {
+                    display: contents;
+                }
+                #content {
+                    display: none;
+                }
+                #content.denied {
+                    display: contents;
+                }
+                #loading {
+                    display: none;
+                }
+                #loading.active {
+                    display: inline-block;
+                }
+            </style>
+            <div id="loading" part="loading">
+                <slot name="loading"><!-- Optional loading content --></slot>
+            </div>
+            <div id="content" part="content">
+                <slot></slot>
+            </div>
+        `;
+        
+        this.contentDiv = this.shadowRoot.getElementById('content');
+        this.loadingDiv = this.shadowRoot.getElementById('loading');
+        this.checkInProgress = false;
+    }
+    
+    connectedCallback() {
+        // Check permissions when element is added to DOM
+        this.checkPermissions();
+    }
+    
+    attributeChangedCallback(name, oldValue, newValue) {
+        // Re-check permissions when relevant attributes change
+        if (oldValue !== newValue && (name === 'method' || name === 'selector' || name === 'href' || name === 'closest')) {
+            this.checkPermissions();
+        }
+    }
+    
+    async checkPermissions() {
+        const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
+        let selector = this.getAttribute('selector');
+        const closest = this.getAttribute('closest');
+        let href = this.getAttribute('href');
+        const cacheTTL = parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
+        
+        // Handle 'closest' attribute
+        if (closest && !selector) {
+            const targetElement = this.closest(closest);
+            if (targetElement) {
+                // Generate selector for the found element
+                selector = targetElement.selector;
+            }
+        }
+        
+        // If href contains selector-request syntax, parse it
+        if (href && href.includes('#(selector=')) {
+            const parsed = parseAndResolve(href);
+            href = parsed.href;
+            // If both selector attribute and href selector exist, prefer the explicit selector attribute
+            if (!selector && parsed.selector) {
+                selector = parsed.selector;
+            }
+        }
+        
+        // At least one of selector or href is required
+        if (!selector && !href) {
+            this.showContent(); // Show by default when no selector/href (inverse logic)
+            return;
+        }
+        
+        // Prevent concurrent checks
+        if (this.checkInProgress) {
+            return;
+        }
+        
+        this.checkInProgress = true;
+        this.showLoading();
+        
+        try {
+            // Get list of methods to check (comma-separated)
+            const methodsToCheck = method.split(',').map(m => m.trim());
+            
+            if (window.HTTP_CAN_DEBUG) {
+                console.log('http-cannot: Checking permissions', { methods: methodsToCheck, selector, href });
+            }
+            
+            // Use shared PermissionChecker
+            const allowedMethods = await PermissionChecker.checkPermissions(methodsToCheck, {
+                selector,
+                href,
+                cacheTTL
+            });
+            
+            // Check if ALL requested methods are allowed (AND logic)
+            const normalizedMethods = methodsToCheck.map(m => m.toUpperCase());
+            const allMethodsAllowed = normalizedMethods.every(m => allowedMethods.has(m));
+            
+            // INVERSE LOGIC: Show content when permissions are DENIED
+            if (!allMethodsAllowed) {
+                this.showContent();
+                this.dispatchEvent(new CustomEvent('http-cannot-shown', {
+                    bubbles: true,
+                    detail: { 
+                        requested: methodsToCheck, 
+                        allowed: Array.from(allowedMethods),
+                        selector,
+                        href
+                    }
+                }));
+            } else {
+                this.hideContent();
+                this.dispatchEvent(new CustomEvent('http-cannot-hidden', {
+                    bubbles: true,
+                    detail: { methods: methodsToCheck, selector, href }
+                }));
+            }
+            
+        } catch (error) {
+            // On error, show content (fail-open for cannot)
+            this.showContent();
+            this.dispatchEvent(new CustomEvent('http-cannot-error', {
+                bubbles: true,
+                detail: { error: error.message, selector, href }
+            }));
+        } finally {
+            this.hideLoading();
+            this.checkInProgress = false;
+        }
+    }
+    
+    showContent() {
+        this.contentDiv.classList.add('denied');
+    }
+    
+    hideContent() {
+        this.contentDiv.classList.remove('denied');
+    }
+    
+    showLoading() {
+        this.loadingDiv.classList.add('active');
+    }
+    
+    hideLoading() {
+        this.loadingDiv.classList.remove('active');
+    }
+}
+
+// Register the custom element
+customElements.define('http-cannot', HttpCannot);
