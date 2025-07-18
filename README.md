@@ -401,7 +401,7 @@ document.addEventListener('http-can-denied', (event) => {
 - **Smart caching** - Reduces redundant OPTIONS requests (shared with window.server.can())
 - **Reactive** - Re-checks when attributes change
 - **AND logic** - Multiple methods all must be allowed
-- **Shadow DOM** - Encapsulated styling and structure
+- **DOM-aware visibility** - Visible content stays in light DOM for full accessibility, hidden content moves to shadow DOM
 
 Note: Both `window.server.can()` and `<http-can>` share the same permission cache, so checking the same permissions through either API will reuse cached results.
 
@@ -480,6 +480,7 @@ document.addEventListener('http-cannot-shown', (event) => {
 - **Fail-open on error** - Shows content if permission check fails
 - **Shared cache** - Reuses the same permission cache as `http-can`
 - **Same attributes** - Fully compatible with `http-can` attributes
+- **DOM-aware visibility** - Visible content stays in light DOM for full accessibility, hidden content moves to shadow DOM
 
 ## Server Implementation
 

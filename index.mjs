@@ -580,42 +580,33 @@ class HttpCan extends HTMLElement {
     constructor() {
         super();
         
-        // Create shadow DOM
+        // Create shadow DOM for hidden content
         this.attachShadow({ mode: 'open' });
         
-        // Create slot for content (hidden by default)
+        // Container in shadow DOM for hidden content
         this.shadowRoot.innerHTML = `
             <style>
                 :host {
                     display: contents;
                 }
-                #content {
-                    display: none;
-                }
-                #content.allowed {
-                    display: contents;
-                }
-                #loading {
-                    display: none;
-                }
-                #loading.active {
-                    display: inline-block;
-                }
             </style>
-            <div id="loading" part="loading">
-                <slot name="loading"><!-- Optional loading content --></slot>
-            </div>
-            <div id="content" part="content">
-                <slot></slot>
-            </div>
+            <div id="hidden-content"></div>
         `;
         
-        this.contentDiv = this.shadowRoot.getElementById('content');
-        this.loadingDiv = this.shadowRoot.getElementById('loading');
+        this.hiddenContainer = this.shadowRoot.getElementById('hidden-content');
         this.checkInProgress = false;
+        this.originalChildren = [];
     }
     
     connectedCallback() {
+        // Store original children if not already done
+        if (this.originalChildren.length === 0) {
+            this.originalChildren = Array.from(this.children);
+        }
+        
+        // Initially hide content by moving to shadow DOM
+        this.hideContent();
+        
         // Check permissions when element is added to DOM
         this.checkPermissions();
     }
@@ -719,19 +710,27 @@ class HttpCan extends HTMLElement {
     }
     
     showContent() {
-        this.contentDiv.classList.add('allowed');
+        // Move content from shadow DOM back to light DOM
+        while (this.hiddenContainer.firstChild) {
+            this.appendChild(this.hiddenContainer.firstChild);
+        }
     }
     
     hideContent() {
-        this.contentDiv.classList.remove('allowed');
+        // Move content from light DOM to shadow DOM
+        while (this.firstChild) {
+            this.hiddenContainer.appendChild(this.firstChild);
+        }
     }
     
     showLoading() {
-        this.loadingDiv.classList.add('active');
+        // Could dispatch an event or add an attribute for external loading indicators
+        this.setAttribute('loading', '');
     }
     
     hideLoading() {
-        this.loadingDiv.classList.remove('active');
+        // Remove loading attribute
+        this.removeAttribute('loading');
     }
 }
 
@@ -753,42 +752,33 @@ class HttpCannot extends HTMLElement {
     constructor() {
         super();
         
-        // Create shadow DOM
+        // Create shadow DOM for hidden content
         this.attachShadow({ mode: 'open' });
         
-        // Create slot for content (hidden by default)
+        // Container in shadow DOM for hidden content
         this.shadowRoot.innerHTML = `
             <style>
                 :host {
                     display: contents;
                 }
-                #content {
-                    display: none;
-                }
-                #content.denied {
-                    display: contents;
-                }
-                #loading {
-                    display: none;
-                }
-                #loading.active {
-                    display: inline-block;
-                }
             </style>
-            <div id="loading" part="loading">
-                <slot name="loading"><!-- Optional loading content --></slot>
-            </div>
-            <div id="content" part="content">
-                <slot></slot>
-            </div>
+            <div id="hidden-content"></div>
         `;
         
-        this.contentDiv = this.shadowRoot.getElementById('content');
-        this.loadingDiv = this.shadowRoot.getElementById('loading');
+        this.hiddenContainer = this.shadowRoot.getElementById('hidden-content');
         this.checkInProgress = false;
+        this.originalChildren = [];
     }
     
     connectedCallback() {
+        // Store original children if not already done
+        if (this.originalChildren.length === 0) {
+            this.originalChildren = Array.from(this.children);
+        }
+        
+        // Initially hide content by moving to shadow DOM
+        this.hideContent();
+        
         // Check permissions when element is added to DOM
         this.checkPermissions();
     }
@@ -893,19 +883,27 @@ class HttpCannot extends HTMLElement {
     }
     
     showContent() {
-        this.contentDiv.classList.add('denied');
+        // Move content from shadow DOM back to light DOM
+        while (this.hiddenContainer.firstChild) {
+            this.appendChild(this.hiddenContainer.firstChild);
+        }
     }
     
     hideContent() {
-        this.contentDiv.classList.remove('denied');
+        // Move content from light DOM to shadow DOM
+        while (this.firstChild) {
+            this.hiddenContainer.appendChild(this.firstChild);
+        }
     }
     
     showLoading() {
-        this.loadingDiv.classList.add('active');
+        // Could dispatch an event or add an attribute for external loading indicators
+        this.setAttribute('loading', '');
     }
     
     hideLoading() {
-        this.loadingDiv.classList.remove('active');
+        // Remove loading attribute
+        this.removeAttribute('loading');
     }
 }
 
