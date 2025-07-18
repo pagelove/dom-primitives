@@ -599,6 +599,19 @@ class HttpCan extends HTMLElement {
         }
     }
     
+    async basicPermissionCheck(methodsToCheck, selector, href, cacheTTL) {
+        const allowedMethods = await PermissionChecker.checkPermissions(methodsToCheck, {
+            selector,
+            href,
+            cacheTTL
+        });
+        // Check if ALL requested methods are allowed (AND logic)
+        const normalizedMethods = methodsToCheck.map(m => m.toUpperCase());
+        const allMethodsAllowed = normalizedMethods.every(m => allowedMethods.has(m));
+           
+        return allMethodsAllowed;
+    }
+
     async checkPermissions() {
         const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
         let selector = this.getAttribute('selector');
@@ -652,23 +665,26 @@ class HttpCan extends HTMLElement {
                 href,
                 cacheTTL
             });
-            
-            // Check if ALL requested methods are allowed (AND logic)
-            const normalizedMethods = methodsToCheck.map(m => m.toUpperCase());
-            const allMethodsAllowed = normalizedMethods.every(m => allowedMethods.has(m));
-            
+
+            const allMethodsAllowed = await this.basicPermissionCheck(methodsToCheck, selector, href, cacheTTL);
+                        
             if (allMethodsAllowed) {
                 this.showContent();
-                this.dispatchEvent(new CustomEvent('http-can-allowed', {
+                this.dispatchEvent(new CustomEvent('http-can', {
                     bubbles: true,
-                    detail: { methods: methodsToCheck, selector, href }
+                    detail: { 
+                        methods: methodsToCheck,
+                        allowed: Array.from(allowedMethods), 
+                        selector, 
+                        href 
+                    }
                 }));
             } else {
                 this.hideContent();
-                this.dispatchEvent(new CustomEvent('http-can-denied', {
+                this.dispatchEvent(new CustomEvent('http-cannot', {
                     bubbles: true,
-                    detail: { 
-                        requested: methodsToCheck, 
+                    detail: {
+                        methods: methodsToCheck,                         
                         allowed: Array.from(allowedMethods),
                         selector,
                         href
@@ -702,6 +718,7 @@ class HttpCan extends HTMLElement {
     }
 }
 
+
 // Register the custom element
 customElements.define('http-can', HttpCan);
 
@@ -711,166 +728,9 @@ customElements.define('http-can', HttpCan);
     This is the inverse of http-can - it shows content when permissions are NOT granted
 */
 
-class HttpCannot extends HTMLElement {
-    // Observe these attributes for changes
-    static get observedAttributes() {
-        return ['method', 'selector', 'cache-ttl', 'href', 'closest'];
-    }
-    
-    constructor() {
-        super();
-        
-        // Create shadow DOM for hidden content
-        this.attachShadow({ mode: 'open' });
-        
-        // Container in shadow DOM for hidden content
-        this.shadowRoot.innerHTML = `
-            <style>
-                :host {
-                    display: contents;
-                }
-            </style>
-            <div id="hidden-content"></div>
-        `;
-        
-        this.hiddenContainer = this.shadowRoot.getElementById('hidden-content');
-        this.checkInProgress = false;
-        this.originalChildren = [];
-    }
-    
-    connectedCallback() {
-        // Store original children if not already done
-        if (this.originalChildren.length === 0) {
-            this.originalChildren = Array.from(this.children);
-        }
-        
-        // Initially hide content by moving to shadow DOM
-        this.hideContent();
-        
-        // Check permissions when element is added to DOM
-        this.checkPermissions();
-    }
-    
-    attributeChangedCallback(name, oldValue, newValue) {
-        // Re-check permissions when relevant attributes change
-        if (oldValue !== newValue && (name === 'method' || name === 'selector' || name === 'href' || name === 'closest')) {
-            this.checkPermissions();
-        }
-    }
-    
-    async checkPermissions() {
-        const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
-        let selector = this.getAttribute('selector');
-        const closest = this.getAttribute('closest');
-        let href = this.getAttribute('href');
-        const cacheTTL = parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
-        
-        // Handle 'closest' attribute
-        if (closest && !selector) {
-            const targetElement = this.closest(closest);
-            if (targetElement) {
-                // Generate selector for the found element
-                selector = targetElement.selector;
-            }
-        }
-        
-        // If href contains selector-request syntax, parse it
-        if (href && href.includes('#(selector=')) {
-            const parsed = parseAndResolve(href);
-            href = parsed.href;
-            // If both selector attribute and href selector exist, prefer the explicit selector attribute
-            if (!selector && parsed.selector) {
-                selector = parsed.selector;
-            }
-        }
-        
-        // At least one of selector or href is required
-        if (!selector && !href) {
-            this.showContent(); // Show by default when no selector/href (inverse logic)
-            return;
-        }
-        
-        // Prevent concurrent checks
-        if (this.checkInProgress) {
-            return;
-        }
-        
-        this.checkInProgress = true;
-        
-        try {
-            // Get list of methods to check (comma-separated)
-            const methodsToCheck = method.split(',').map(m => m.trim());
-            
-            if (window.HTTP_CAN_DEBUG) {
-                console.log('http-cannot: Checking permissions', { methods: methodsToCheck, selector, href });
-            }
-            
-            // Use shared PermissionChecker
-            const allowedMethods = await PermissionChecker.checkPermissions(methodsToCheck, {
-                selector,
-                href,
-                cacheTTL
-            });
-            
-            // Check if ALL requested methods are allowed (AND logic)
-            const normalizedMethods = methodsToCheck.map(m => m.toUpperCase());
-            const allMethodsAllowed = normalizedMethods.every(m => allowedMethods.has(m));
-            
-            // INVERSE LOGIC: Show content when permissions are DENIED
-            if (!allMethodsAllowed) {
-                this.showContent();
-                this.dispatchEvent(new CustomEvent('http-cannot-shown', {
-                    bubbles: true,
-                    detail: { 
-                        requested: methodsToCheck, 
-                        allowed: Array.from(allowedMethods),
-                        selector,
-                        href
-                    }
-                }));
-            } else {
-                this.hideContent();
-                this.dispatchEvent(new CustomEvent('http-cannot-hidden', {
-                    bubbles: true,
-                    detail: { methods: methodsToCheck, selector, href }
-                }));
-            }
-            
-        } catch (error) {
-            // On error, hide content (we can't determine permissions)
-            this.hideContent();
-            this.dispatchEvent(new CustomEvent('http-cannot-error', {
-                bubbles: true,
-                detail: { error: error.message, selector, href }
-            }));
-        } finally {
-            this.hideLoading();
-            this.checkInProgress = false;
-        }
-    }
-    
-    showContent() {
-        // Move content from shadow DOM back to light DOM
-        while (this.hiddenContainer.firstChild) {
-            this.appendChild(this.hiddenContainer.firstChild);
-        }
-    }
-    
-    hideContent() {
-        // Move content from light DOM to shadow DOM
-        while (this.firstChild) {
-            this.hiddenContainer.appendChild(this.firstChild);
-        }
-    }
-    
-    showLoading() {
-        // Could dispatch an event or add an attribute for external loading indicators
-        this.setAttribute('loading', '');
-    }
-    
-    hideLoading() {
-        // Remove loading attribute
-        this.removeAttribute('loading');
+class HttpCannot extends HttpCan {
+    async basicPermissionCheck(methodsToCheck, selector, href, cacheTTL) {
+        return !(await super.basicPermissionCheck(methodsToCheck, selector, href, cacheTTL));
     }
 }
 

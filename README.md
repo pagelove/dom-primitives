@@ -154,6 +154,24 @@ element.addEventListener('DASError', (event) => {
 });
 ```
 
+### http-can
+Fired when the `<http-can>` element shows its content (permissions allowed):
+```javascript
+document.addEventListener('http-can', (event) => {
+  console.log('Permissions granted:', event.detail);
+  // { methods: ['GET'], allowed: ['GET', 'POST'], selector: '#item', href: '/page' }
+});
+```
+
+### http-cannot
+Fired when the `<http-can>` element hides its content (permissions denied) or when `<http-cannot>` shows its content:
+```javascript
+document.addEventListener('http-cannot', (event) => {
+  console.log('Permissions denied:', event.detail);
+  // { methods: ['DELETE'], allowed: ['GET'], selector: '#item', href: '/page' }
+});
+```
+
 ## CSS Selector Generation
 
 Every HTML element automatically gets a `selector` property that generates a unique CSS path:
@@ -384,14 +402,14 @@ The `<http-can>` WebComponent conditionally displays content based on HTTP metho
 
 The component dispatches these events:
 
-- `http-can-allowed` - Permissions granted
-- `http-can-denied` - Permissions denied
+- `http-can` - Fired when content is shown (permissions granted)
+- `http-cannot` - Fired when content is hidden (permissions denied)
 - `http-can-error` - Request failed
 
 ```javascript
-document.addEventListener('http-can-denied', (event) => {
+document.addEventListener('http-cannot', (event) => {
   console.log('Access denied:', event.detail);
-  // { requested: ['PUT', 'DELETE'], allowed: ['GET'], selector: '#item' }
+  // { methods: ['PUT', 'DELETE'], allowed: ['GET'], selector: '#item', href: '/page' }
 });
 ```
 
@@ -463,14 +481,16 @@ The `<http-cannot>` WebComponent is the inverse of `<http-can>` - it shows conte
 
 ### Events
 
-- `http-cannot-shown` - Content shown (permissions denied)
-- `http-cannot-hidden` - Content hidden (permissions granted)
-- `http-cannot-error` - Request failed
+Since `http-cannot` inherits from `http-can`, it uses the same event names:
+
+- `http-cannot` - Fired when content is shown (permissions denied)
+- `http-can` - Fired when content is hidden (permissions granted)
+- `http-can-error` - Request failed
 
 ```javascript
-document.addEventListener('http-cannot-shown', (event) => {
-  console.log('Access denied:', event.detail);
-  // { requested: ['DELETE'], allowed: ['GET', 'PUT'], selector: '#item' }
+document.addEventListener('http-cannot', (event) => {
+  console.log('Access denied - showing fallback content:', event.detail);
+  // { methods: ['DELETE'], allowed: ['GET', 'PUT'], selector: '#item', href: '/page' }
 });
 ```
 
