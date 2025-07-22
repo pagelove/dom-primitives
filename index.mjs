@@ -476,16 +476,18 @@ class PermissionChecker {
             return cachedResult;
         }
         
-        // Fetch allowed methods
-        const allowedMethods = await PermissionChecker.fetchAllowedMethods(selector, href);
+        // Fetch allowed methods (pass cacheTTL to control browser caching)
+        const allowedMethods = await PermissionChecker.fetchAllowedMethods(selector, href, cacheTTL);
         
-        // Cache the result
-        PermissionChecker.setCachedResult(cacheKey, allowedMethods);
+        // Cache the result only if TTL > 0
+        if (cacheTTL > 0) {
+            PermissionChecker.setCachedResult(cacheKey, allowedMethods);
+        }
         
         return allowedMethods;
     }
     
-    static async fetchAllowedMethods(selector, href) {
+    static async fetchAllowedMethods(selector, href, cacheTTL = null) {
         const headers = new Headers();
         
         // Always set Range header if selector is provided
@@ -508,10 +510,18 @@ class PermissionChecker {
         }
         
         try {
-            const response = await fetch(url, {
+            const fetchOptions = {
                 method: 'OPTIONS',
                 headers: headers
-            });
+            };
+            
+            // If cacheTTL is 0, ensure no browser caching
+            if (cacheTTL === 0) {
+                fetchOptions.cache = 'no-store';
+                headers.set('Cache-Control', 'no-cache');
+            }
+            
+            const response = await fetch(url, fetchOptions);
             
             if (!response.ok) {
                 throw new Error(`OPTIONS request failed with status ${response.status}`);
@@ -543,6 +553,9 @@ class PermissionChecker {
     }
     
     static getCachedResult(cacheKey, ttl) {
+        // If TTL is 0, bypass cache entirely
+        if (ttl === 0) return null;
+        
         const cached = PermissionChecker.cache.get(cacheKey);
         if (!cached) return null;
         
@@ -590,6 +603,22 @@ class HttpCan extends HTMLElement {
 
         // Check permissions when element is added to DOM
         this.checkPermissions();
+        
+        // Listen for HTTPAuthChange events
+        this.authChangeHandler = this.handleAuthorizationChange.bind(this);
+        document.addEventListener('HTTPAuthChange', this.authChangeHandler);
+    }
+    
+    disconnectedCallback() {
+        // Clean up event listener when element is removed
+        if (this.authChangeHandler) {
+            document.removeEventListener('HTTPAuthChange', this.authChangeHandler);
+        }
+    }
+    
+    handleAuthorizationChange(event) {
+        // Force a fresh check by clearing cache and re-checking permissions
+        this.checkPermissions(true); // Pass true to indicate fresh check needed
     }
     
     attributeChangedCallback(name, oldValue, newValue) {
@@ -612,12 +641,12 @@ class HttpCan extends HTMLElement {
         return allMethodsAllowed;
     }
 
-    async checkPermissions() {
+    async checkPermissions(forceFresh = false) {
         const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
         let selector = this.getAttribute('selector');
         const closest = this.getAttribute('closest');
         let href = this.getAttribute('href');
-        const cacheTTL = parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
+        const cacheTTL = forceFresh ? 0 : parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
         
         // Handle 'closest' attribute
         if (closest && !selector) {

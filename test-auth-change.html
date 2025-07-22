@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test HTTPAuthChange Event</title>
+    <script type="module" src="./index.mjs"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        http-can, http-cannot {
+            display: block;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        http-can {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        http-cannot {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test HTTPAuthChange Event</h1>
+    
+    <div class="test-section">
+        <h2>Authorization Change Test</h2>
+        <p>Click the button below to dispatch an HTTPAuthChange event. The http-can and http-cannot elements should re-check their permissions with fresh (non-cached) OPTIONS requests.</p>
+        
+        <button id="triggerAuthChange">Trigger HTTPAuthChange Event</button>
+        <button id="enableDebug">Enable Debug Mode</button>
+        <button id="clearLog">Clear Log</button>
+        
+        <div class="log" id="eventLog"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>http-can Elements</h2>
+        
+        <http-can method="GET" selector="#test-element">
+            <p>✅ You CAN perform GET on #test-element</p>
+        </http-can>
+        
+        <http-can method="POST,PUT" selector=".content">
+            <p>✅ You CAN perform POST and PUT on .content</p>
+        </http-can>
+        
+        <http-can method="DELETE" selector="body">
+            <p>✅ You CAN perform DELETE on body</p>
+        </http-can>
+    </div>
+    
+    <div class="test-section">
+        <h2>http-cannot Elements</h2>
+        
+        <http-cannot method="DELETE" selector="#important-data">
+            <p>❌ You CANNOT perform DELETE on #important-data</p>
+        </http-cannot>
+        
+        <http-cannot method="PUT" selector=".readonly">
+            <p>❌ You CANNOT perform PUT on .readonly</p>
+        </http-cannot>
+    </div>
+    
+    <div id="test-element" class="test-section">
+        <h2>Test Element</h2>
+        <p>This element has id="test-element" for testing selectors.</p>
+    </div>
+
+    <script type="module">
+        const log = document.getElementById('eventLog');
+        
+        function logEvent(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.textContent = `[${timestamp}] ${message}`;
+            if (data) {
+                entry.textContent += ' - ' + JSON.stringify(data);
+            }
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // Listen for various events
+        document.addEventListener('DASAvailable', () => {
+            logEvent('DAS is available');
+        });
+        
+        document.addEventListener('DASUnavailable', () => {
+            logEvent('DAS is not available');
+        });
+        
+        document.addEventListener('http-can', (e) => {
+            logEvent('http-can event', e.detail);
+        });
+        
+        document.addEventListener('http-cannot', (e) => {
+            logEvent('http-cannot event', e.detail);
+        });
+        
+        document.addEventListener('http-can-error', (e) => {
+            logEvent('http-can-error event', e.detail);
+        });
+        
+        // Button handlers
+        document.getElementById('triggerAuthChange').addEventListener('click', () => {
+            logEvent('Dispatching HTTPAuthChange event');
+            const event = new CustomEvent('HTTPAuthChange', {
+                bubbles: true,
+                detail: { source: 'test' }
+            });
+            document.dispatchEvent(event);
+        });
+        
+        document.getElementById('enableDebug').addEventListener('click', () => {
+            window.HTTP_CAN_DEBUG = true;
+            window.PERMISSION_DEBUG = true;
+            logEvent('Debug mode enabled');
+        });
+        
+        document.getElementById('clearLog').addEventListener('click', () => {
+            log.innerHTML = '';
+        });
+        
+        // Monitor fetch requests to see OPTIONS calls
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const [url, options] = args;
+            if (options && options.method === 'OPTIONS') {
+                const selector = options.headers?.get?.('Range');
+                const cache = options.cache;
+                logEvent('OPTIONS request', { 
+                    url, 
+                    selector,
+                    cache,
+                    'Cache-Control': options.headers?.get?.('Cache-Control')
+                });
+            }
+            return originalFetch.apply(this, args);
+        };
+        
+        logEvent('Test page loaded');
+    </script>
+</body>
+</html>

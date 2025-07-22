@@ -420,8 +420,39 @@ document.addEventListener('http-cannot', (event) => {
 - **Reactive** - Re-checks when attributes change
 - **AND logic** - Multiple methods all must be allowed
 - **DOM-aware visibility** - Visible content stays in light DOM for full accessibility, hidden content moves to shadow DOM
+- **Authorization change handling** - Automatically re-checks permissions when HTTPAuthChange events occur
 
 Note: Both `window.server.can()` and `<http-can>` share the same permission cache, so checking the same permissions through either API will reuse cached results.
+
+### HTTPAuthChange Event
+
+The `http-can` element automatically listens for `HTTPAuthChange` events on the document. When this event is dispatched, all `http-can` elements will re-check their permissions with fresh (non-cached) OPTIONS requests. This is useful when user authorization changes (login, logout, role changes, etc.).
+
+```javascript
+// Dispatch HTTPAuthChange after login/logout
+async function login(credentials) {
+    await performLogin(credentials);
+    // Notify all http-can elements to re-check permissions
+    document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+}
+
+async function logout() {
+    await performLogout();
+    // Notify all http-can elements to re-check permissions
+    document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+}
+
+// Or when permissions might have changed
+function onPermissionsUpdated() {
+    document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+}
+```
+
+When `HTTPAuthChange` is dispatched:
+- All `http-can` elements immediately re-check their permissions
+- The checks bypass all caches (internal and browser cache)
+- Elements will show/hide based on the fresh authorization status
+- This happens automatically - no additional code needed
 
 ### HTTP-Cannot WebComponent
 
@@ -501,6 +532,33 @@ document.addEventListener('http-cannot', (event) => {
 - **Shared cache** - Reuses the same permission cache as `http-can`
 - **Same attributes** - Fully compatible with `http-can` attributes
 - **DOM-aware visibility** - Visible content stays in light DOM for full accessibility, hidden content moves to shadow DOM
+- **Authorization change handling** - Automatically re-checks permissions when HTTPAuthChange events occur
+
+### HTTPAuthChange Event
+
+Like `http-can`, the `http-cannot` element also listens for `HTTPAuthChange` events. When authorization changes occur, all `http-cannot` elements will re-check permissions and update their visibility accordingly.
+
+```javascript
+// Example: Show/hide upgrade prompts based on user status
+async function upgradeAccount() {
+    await performUpgrade();
+    // Both http-can and http-cannot elements will update
+    document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+}
+
+// Example: Complete UI updates on role change
+async function changeUserRole(newRole) {
+    await updateRole(newRole);
+    // All permission-aware elements update automatically
+    document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+}
+```
+
+This enables seamless UI transitions where:
+- `http-can` elements appear when permissions are granted
+- `http-cannot` elements disappear when permissions are granted
+- The inverse happens when permissions are revoked
+- All updates happen automatically with fresh permission checks
 
 ## Server Implementation
 
