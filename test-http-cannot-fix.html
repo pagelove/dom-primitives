@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test http-cannot HTTPAuthChange Fix</title>
+    <script type="module" src="./index.mjs"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        http-can, http-cannot {
+            display: block;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        http-can {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        http-cannot {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            color: #721c24;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test http-cannot HTTPAuthChange Fix</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button id="triggerAuthChange">Trigger HTTPAuthChange Event</button>
+        <button id="simulateLogin">Simulate Login (Mock Permissions)</button>
+        <button id="simulateLogout">Simulate Logout (Mock No Permissions)</button>
+        <button id="clearLog">Clear Log</button>
+        
+        <div class="log" id="eventLog"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Elements</h2>
+        
+        <h3>http-can elements (should show when permissions granted):</h3>
+        <http-can method="DELETE" selector="#test-item">
+            <p>✅ You CAN delete #test-item</p>
+        </http-can>
+        
+        <http-can method="PUT" selector="#test-item">
+            <p>✅ You CAN edit #test-item</p>
+        </http-can>
+        
+        <h3>http-cannot elements (should show when permissions denied):</h3>
+        <http-cannot method="DELETE" selector="#test-item">
+            <p class="warning">❌ You CANNOT delete #test-item</p>
+        </http-cannot>
+        
+        <http-cannot method="PUT" selector="#test-item">
+            <p class="warning">❌ You CANNOT edit #test-item</p>
+        </http-cannot>
+        
+        <http-cannot method="POST" selector="#readonly-section">
+            <p class="warning">❌ You CANNOT add items to #readonly-section</p>
+        </http-cannot>
+    </div>
+    
+    <div id="test-item" class="test-section">
+        <h2>Test Item</h2>
+        <p>This is the test item with id="test-item"</p>
+    </div>
+    
+    <div id="readonly-section" class="test-section">
+        <h2>Read-only Section</h2>
+        <p>This section is read-only</p>
+    </div>
+
+    <script type="module">
+        const log = document.getElementById('eventLog');
+        let mockPermissions = new Set(['GET']); // Default: only GET allowed
+        
+        function logEvent(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.textContent = `[${timestamp}] ${message}`;
+            if (data) {
+                entry.textContent += ' - ' + JSON.stringify(data);
+            }
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // Override fetch to mock permission responses
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const [url, options] = args;
+            
+            if (options && options.method === 'OPTIONS') {
+                logEvent('OPTIONS request intercepted', { 
+                    mockPermissions: Array.from(mockPermissions),
+                    cache: options.cache
+                });
+                
+                // Mock response
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    headers: new Headers({
+                        'Allow': Array.from(mockPermissions).join(', '),
+                        'Accept-Ranges': 'selector'
+                    })
+                });
+            }
+            
+            return originalFetch.apply(this, args);
+        };
+        
+        // Listen for events
+        document.addEventListener('DASAvailable', () => {
+            logEvent('DAS is available');
+        });
+        
+        document.addEventListener('http-can', (e) => {
+            logEvent('http-can event - content shown', {
+                methods: e.detail.methods,
+                allowed: e.detail.allowed
+            });
+        });
+        
+        document.addEventListener('http-cannot', (e) => {
+            logEvent('http-cannot event - content shown', {
+                methods: e.detail.methods,
+                allowed: e.detail.allowed
+            });
+        });
+        
+        // Button handlers
+        document.getElementById('triggerAuthChange').addEventListener('click', () => {
+            logEvent('Dispatching HTTPAuthChange event');
+            document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+        });
+        
+        document.getElementById('simulateLogin').addEventListener('click', () => {
+            mockPermissions = new Set(['GET', 'POST', 'PUT', 'DELETE']);
+            logEvent('Simulated login - all permissions granted');
+            document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+        });
+        
+        document.getElementById('simulateLogout').addEventListener('click', () => {
+            mockPermissions = new Set(['GET']);
+            logEvent('Simulated logout - only GET allowed');
+            document.dispatchEvent(new CustomEvent('HTTPAuthChange'));
+        });
+        
+        document.getElementById('clearLog').addEventListener('click', () => {
+            log.innerHTML = '';
+        });
+        
+        // Initial state
+        logEvent('Test page loaded', { 
+            initialPermissions: Array.from(mockPermissions) 
+        });
+        
+        // Debug: Check element content after a delay
+        setTimeout(() => {
+            document.querySelectorAll('http-cannot').forEach((el, i) => {
+                logEvent(`http-cannot[${i}] has ${el.children.length} children`);
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

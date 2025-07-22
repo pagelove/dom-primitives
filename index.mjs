@@ -590,14 +590,20 @@ class HttpCan extends HTMLElement {
         return ['method', 'selector', 'cache-ttl', 'href', 'closest'];
     }
 
-    retained;
+    originalContent;
     
     constructor() {
         super();
         this.checkInProgress = false;
+        this.originalContent = null;
     }
     
     connectedCallback() {
+        // Store original content if not already stored
+        if (!this.originalContent) {
+            this.originalContent = Array.from(this.childNodes).map(node => node.cloneNode(true));
+        }
+        
         // retain original children, and remove them from the DOM for now.
         this.hideContent();
 
@@ -733,14 +739,21 @@ class HttpCan extends HTMLElement {
     }
     
     showContent() {
-        // Move content from shadow DOM back to light DOM
-        const copy = this.retained;
-        this.retained = [];
-        copy.forEach( child => this.appendChild( child ))
+        // Clear current content
+        while (this.firstChild) {
+            this.removeChild(this.firstChild);
+        }
+        
+        // Clone and append original content
+        if (this.originalContent) {
+            this.originalContent.forEach(node => {
+                this.appendChild(node.cloneNode(true));
+            });
+        }
     }
     
     hideContent() {
-        this.retained = Array.from( this.children );
+        // Just remove all children, original content is preserved separately
         while (this.firstChild) {
             this.removeChild(this.firstChild);
         }               
