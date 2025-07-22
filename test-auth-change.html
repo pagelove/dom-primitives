@@ -95,6 +95,14 @@
         <http-cannot method="PUT" selector=".readonly">
             <p>❌ You CANNOT perform PUT on .readonly</p>
         </http-cannot>
+        
+        <http-cannot method="POST" selector="#test-element">
+            <p>❌ You CANNOT perform POST on #test-element</p>
+        </http-cannot>
+        
+        <http-cannot method="GET,PUT,DELETE" selector="body">
+            <p>❌ You CANNOT perform GET, PUT and DELETE on body</p>
+        </http-cannot>
     </div>
     
     <div id="test-element" class="test-section">

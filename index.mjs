@@ -761,6 +761,100 @@ class HttpCannot extends HttpCan {
     async basicPermissionCheck(methodsToCheck, selector, href, cacheTTL) {
         return !(await super.basicPermissionCheck(methodsToCheck, selector, href, cacheTTL));
     }
+    
+    async checkPermissions(forceFresh = false) {
+        const method = this.getAttribute('method') || 'GET';  // Default to GET if not specified
+        let selector = this.getAttribute('selector');
+        const closest = this.getAttribute('closest');
+        let href = this.getAttribute('href');
+        const cacheTTL = forceFresh ? 0 : parseInt(this.getAttribute('cache-ttl') || PermissionChecker.DEFAULT_CACHE_TTL);
+        
+        // Handle 'closest' attribute
+        if (closest && !selector) {
+            const targetElement = this.closest(closest);
+            if (targetElement) {
+                // Generate selector for the found element
+                selector = targetElement.selector;
+            }
+        }
+        
+        // If href contains selector-request syntax, parse it
+        if (href && href.includes('#(selector=')) {
+            const parsed = parseAndResolve(href);
+            href = parsed.href;
+            // If both selector attribute and href selector exist, prefer the explicit selector attribute
+            if (!selector && parsed.selector) {
+                selector = parsed.selector;
+            }
+        }
+        
+        // At least one of selector or href is required
+        if (!selector && !href) {
+            this.hideContent();
+            return;
+        }
+        
+        // Prevent concurrent checks
+        if (this.checkInProgress) {
+            return;
+        }
+        
+        this.checkInProgress = true;
+        
+        try {
+            // Get list of methods to check (comma-separated)
+            const methodsToCheck = method.split(',').map(m => m.trim());
+            
+            if (window.HTTP_CAN_DEBUG) {
+                console.log('http-cannot: Checking permissions', { methods: methodsToCheck, selector, href });
+            }
+            
+            // Use shared PermissionChecker to get actual permissions
+            const allowedMethods = await PermissionChecker.checkPermissions(methodsToCheck, {
+                selector,
+                href,
+                cacheTTL
+            });
+            
+            // Check if ALL requested methods are allowed
+            const normalizedMethods = methodsToCheck.map(m => m.toUpperCase());
+            const allMethodsAllowed = normalizedMethods.every(m => allowedMethods.has(m));
+            
+            // For http-cannot, we show content when permissions are DENIED
+            if (!allMethodsAllowed) {
+                this.showContent();
+                this.dispatchEvent(new CustomEvent('http-cannot', {
+                    bubbles: true,
+                    detail: { 
+                        methods: methodsToCheck,
+                        allowed: Array.from(allowedMethods), 
+                        selector, 
+                        href 
+                    }
+                }));
+            } else {
+                this.hideContent();
+                this.dispatchEvent(new CustomEvent('http-can', {
+                    bubbles: true,
+                    detail: {
+                        methods: methodsToCheck,                         
+                        allowed: Array.from(allowedMethods),
+                        selector,
+                        href
+                    }
+                }));
+            }            
+        } catch (error) {
+            // On error, show content for http-cannot (fail-open)
+            this.showContent();
+            this.dispatchEvent(new CustomEvent('http-can-error', {
+                bubbles: true,
+                detail: { error: error.message, selector, href }
+            }));
+        } finally {
+            this.checkInProgress = false;
+        }
+    }
 }
 
 // Register the custom element
