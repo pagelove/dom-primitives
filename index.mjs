@@ -1,4 +1,4 @@
-import { parseAndResolve } from './selector-request/index.mjs';
+import { parseAndResolve } from '../selector-request/index.mjs';
 
 window.location.server = { DASAware: false };
 
